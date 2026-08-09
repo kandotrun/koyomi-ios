@@ -91,7 +91,7 @@ private struct AgendaEventRow: View {
             Button(action: onTogglePin) {
                 Image(systemName: isPinned ? "pin.fill" : "pin")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(isPinned ? tint : .primary.opacity(0.58))
+                    .foregroundStyle(isPinned ? tint : Color.primary.opacity(0.58))
                     .frame(width: 38, height: 38)
             }
             .accessibilityLabel(isPinned ? "\(event.title)のピン留めを解除" : "\(event.title)をピン留め")

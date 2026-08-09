@@ -46,7 +46,7 @@ private struct DateChip: View {
             VStack(spacing: 5) {
                 Text(date.formatted(.dateTime.weekday(.narrow).locale(Locale(identifier: "ja_JP"))))
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(isSelected ? .primary : .primary.opacity(0.62))
+                    .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.62))
                 Text(date.formatted(.dateTime.day()))
                     .font(.headline.monospacedDigit())
                 Circle()
