@@ -14,21 +14,17 @@ struct DateStrip: View {
             .padding(.horizontal, 20)
             .accessibilityIdentifier("month-title")
 
-            ScrollView(.horizontal) {
-                HStack(spacing: 9) {
-                    ForEach(model.dateChoices, id: \.self) { date in
-                        DateChip(
-                            date: date,
-                            isSelected: Calendar.current.isDate(date, inSameDayAs: model.selectedDate),
-                            isToday: Calendar.current.isDateInToday(date),
-                            onSelect: { model.selectDate(date) }
-                        )
-                    }
+            HStack(spacing: 4) {
+                ForEach(model.dateChoices, id: \.self) { date in
+                    DateChip(
+                        date: date,
+                        isSelected: model.calendar.isDate(date, inSameDayAs: model.selectedDate),
+                        isToday: model.calendar.isDateInToday(date),
+                        onSelect: { model.selectDate(date) }
+                    )
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 4)
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, 20)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("date-strip")
         }
@@ -53,9 +49,10 @@ private struct DateChip: View {
                     .fill(isToday ? Color.accentColor : .clear)
                     .frame(width: 4, height: 4)
             }
-            .frame(width: 48, height: 66)
+            .frame(maxWidth: .infinity, minHeight: 64)
             .contentShape(.rect)
         }
+        .frame(maxWidth: .infinity)
         .buttonStyle(.plain)
         .modifier(SelectedDateGlass(isSelected: isSelected))
         .accessibilityLabel(accessibilityLabel)

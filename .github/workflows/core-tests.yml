@@ -2,6 +2,13 @@ name: Core tests
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "Package.swift"
+      - "Shared/**"
+      - "KoyomiTests/**"
+      - ".github/workflows/core-tests.yml"
   pull_request:
     paths:
       - "Package.swift"

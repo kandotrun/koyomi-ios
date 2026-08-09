@@ -47,7 +47,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     var dateChoices: [Date] {
-        (-3...18).compactMap { calendar.date(byAdding: .day, value: $0, to: selectedDate) }
+        (-3...3).compactMap { calendar.date(byAdding: .day, value: $0, to: selectedDate) }
     }
 
     var selectedDateTitle: String {
