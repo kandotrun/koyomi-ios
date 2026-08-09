@@ -9,13 +9,13 @@ final class KoyomiUITests: XCTestCase {
     func testDemoShowsPinnedCountdownAndDailyAgenda() {
         let app = launchDemo()
 
-        XCTAssertTrue(app.staticTexts["こよみ"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.otherElements["pinned-section"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["プロジェクト発表"].exists)
-        XCTAssertTrue(app.otherElements["date-strip"].exists)
-        XCTAssertTrue(app.otherElements["agenda-list"].exists)
-        XCTAssertTrue(app.staticTexts["歯科検診"].exists)
-        XCTAssertTrue(app.buttons["歯科検診をピン留め"].exists)
+        XCTAssertTrue(app.staticTexts["こよみ"].waitForExistence(timeout: 5), "navigation title")
+        XCTAssertTrue(app.descendants(matching: .any)["pinned-section"].waitForExistence(timeout: 2), "pinned section")
+        XCTAssertTrue(app.staticTexts["プロジェクト発表"].exists, "seeded pinned event")
+        XCTAssertTrue(app.descendants(matching: .any)["date-strip"].exists, "date strip")
+        XCTAssertTrue(app.descendants(matching: .any)["agenda-list"].exists, "agenda list")
+        XCTAssertTrue(app.staticTexts["歯科検診"].exists, "demo agenda event")
+        XCTAssertTrue(app.buttons["歯科検診をピン留め"].exists, "pin action")
     }
 
     func testPinButtonAddsAnAgendaEventToPinnedEvents() {

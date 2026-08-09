@@ -57,6 +57,12 @@ jobs:
             -derivedDataPath DerivedData \
             -resultBundlePath TestResults.xcresult \
             | xcbeautify
+      - name: Capture demo screenshot
+        run: |
+          xcrun simctl status_bar "${{ steps.simulator.outputs.id }}" override --time "9:41" --batteryState charged --batteryLevel 100
+          xcrun simctl launch --terminate-running-process "${{ steps.simulator.outputs.id }}" run.kan.koyomi -ui-testing
+          sleep 2
+          xcrun simctl io "${{ steps.simulator.outputs.id }}" screenshot Koyomi.png
       - name: Upload test results and generated project
         if: always()
         uses: actions/upload-artifact@v5
@@ -65,5 +71,6 @@ jobs:
           path: |
             TestResults.xcresult
             Koyomi.xcodeproj
+            Koyomi.png
           if-no-files-found: warn
           retention-days: 7
