@@ -18,8 +18,8 @@ struct DateStrip: View {
                 ForEach(model.dateChoices, id: \.self) { date in
                     DateChip(
                         date: date,
-                        isSelected: model.calendar.isDate(date, inSameDayAs: model.selectedDate),
-                        isToday: model.calendar.isDateInToday(date),
+                        isSelected: Calendar.current.isDate(date, inSameDayAs: model.selectedDate),
+                        isToday: Calendar.current.isDateInToday(date),
                         onSelect: { model.selectDate(date) }
                     )
                 }
