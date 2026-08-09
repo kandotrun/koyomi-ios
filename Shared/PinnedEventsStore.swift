@@ -47,6 +47,16 @@ public final class PinnedEventsStore: @unchecked Sendable {
         return events
     }
 
+    @discardableResult
+    public func remove(id: String) throws -> [PinnedEvent] {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let events = normalize(readUnlocked().filter { $0.id != id })
+        try writeUnlocked(events)
+        return events
+    }
+
     private func readUnlocked() -> [PinnedEvent] {
         guard let data = defaults.data(forKey: key) else { return [] }
         let decoder = JSONDecoder()

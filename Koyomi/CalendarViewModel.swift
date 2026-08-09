@@ -16,6 +16,7 @@ final class CalendarViewModel: ObservableObject {
     private let pinStore: PinnedEventsStore
     private let calendar: Calendar
     private let now: () -> Date
+    private var loadedInterval: DateInterval?
 
     init(
         source: CalendarEventSource,
@@ -91,13 +92,17 @@ final class CalendarViewModel: ObservableObject {
 
     func selectDate(_ date: Date) {
         selectedDate = calendar.startOfDay(for: date)
-        if events.isEmpty, authorizationStatus == .fullAccess {
+        guard authorizationStatus == .fullAccess else { return }
+        let isLoaded = loadedInterval.map {
+            CalendarLoadWindow.contains(day: selectedDate, in: $0, calendar: calendar)
+        } ?? false
+        if !isLoaded {
             refresh()
         }
     }
 
     func selectToday() {
-        selectedDate = calendar.startOfDay(for: now())
+        selectDate(now())
     }
 
     func isPinned(_ event: CalendarEvent) -> Bool {
@@ -115,7 +120,7 @@ final class CalendarViewModel: ObservableObject {
 
     func removePin(_ pin: PinnedEvent) {
         do {
-            pinnedEvents = try pinStore.toggle(pin)
+            pinnedEvents = try pinStore.remove(id: pin.id)
             WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
         } catch {
             errorMessage = "ピン留めを解除できませんでした。"
@@ -151,13 +156,13 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func loadEvents() {
-        guard
-            let start = calendar.date(byAdding: .month, value: -1, to: selectedDate),
-            let end = calendar.date(byAdding: .month, value: 18, to: selectedDate)
-        else { return }
+        guard let interval = CalendarLoadWindow.interval(around: selectedDate, calendar: calendar) else {
+            return
+        }
 
         do {
-            events = try source.events(in: DateInterval(start: start, end: end))
+            events = try source.events(in: interval)
+            loadedInterval = interval
             reconcilePins()
             errorMessage = nil
         } catch {
@@ -166,22 +171,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func reconcilePins() {
-        let exactByID = Dictionary(uniqueKeysWithValues: events.map { ($0.id, $0) })
-        let reconciled = pinnedEvents.map { pin -> PinnedEvent in
-            if let exact = exactByID[pin.id] {
-                return exact.pinnedSnapshot
-            }
-            guard !pin.eventIdentifier.isEmpty else { return pin }
-            let nearest = events
-                .filter { $0.eventIdentifier == pin.eventIdentifier }
-                .min { lhs, rhs in
-                    abs(lhs.startDate.timeIntervalSince(pin.startDate)) < abs(rhs.startDate.timeIntervalSince(pin.startDate))
-                }
-            guard let nearest,
-                  abs(nearest.startDate.timeIntervalSince(pin.startDate)) <= 7 * 86_400
-            else { return pin }
-            return nearest.pinnedSnapshot
-        }
+        let reconciled = PinnedEventReconciler.reconcile(pins: pinnedEvents, with: events)
 
         guard reconciled != pinnedEvents else { return }
         do {

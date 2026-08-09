@@ -51,6 +51,16 @@ final class PinnedEventsStoreTests: XCTestCase {
         XCTAssertEqual(store.load(), [])
     }
 
+    func testRemoveIsIdempotent() throws {
+        let store = PinnedEventsStore(defaults: defaults, key: "pins")
+        let event = makeEvent(id: "event-a", start: Date(timeIntervalSince1970: 100))
+        try store.save([event])
+
+        XCTAssertEqual(try store.remove(id: event.id), [])
+        XCTAssertEqual(try store.remove(id: event.id), [])
+        XCTAssertEqual(store.load(), [])
+    }
+
     private func makeEvent(id: String, start: Date) -> PinnedEvent {
         PinnedEvent(
             id: id,
