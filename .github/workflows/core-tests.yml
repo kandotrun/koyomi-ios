@@ -1,0 +1,32 @@
+name: Core tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "Package.swift"
+      - "Shared/**"
+      - "KoyomiTests/**"
+      - ".github/workflows/core-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Swift package tests
+        run: swift test --parallel

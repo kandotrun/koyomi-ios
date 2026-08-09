@@ -1,0 +1,22 @@
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.moved-aside
+
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# XcodeGen
+project.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+
+# Local signing
+Signing.xcconfig
+*.mobileprovision
