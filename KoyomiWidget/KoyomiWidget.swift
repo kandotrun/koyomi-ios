@@ -23,16 +23,12 @@ struct KoyomiWidgetProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<KoyomiWidgetEntry>) -> Void) {
         let now = Date()
-        let allPins = store.load()
-        let pins = WidgetPinSelector.activePins(from: allPins, at: now, limit: 3)
-        let transitions = pins.flatMap { [$0.startDate, $0.endDate] }.filter { $0 > now }
-        let nextRefresh = transitions.min()?.addingTimeInterval(2) ?? now.addingTimeInterval(6 * 3_600)
-        completion(
-            Timeline(
-                entries: [KoyomiWidgetEntry(date: now, pins: pins)],
-                policy: .after(nextRefresh)
-            )
-        )
+        let states = WidgetTimelinePlanner.states(from: store.load(), at: now, limit: 3)
+        let entries = states.map { KoyomiWidgetEntry(date: $0.date, pins: $0.pins) }
+        let policy: TimelineReloadPolicy = entries.count == 1
+            ? .after(now.addingTimeInterval(6 * 3_600))
+            : .atEnd
+        completion(Timeline(entries: entries, policy: policy))
     }
 
     private static var placeholderPin: PinnedEvent {
@@ -54,6 +50,7 @@ struct KoyomiWidgetProvider: TimelineProvider {
 
 struct KoyomiWidgetView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: KoyomiWidgetEntry
 
     var body: some View {
@@ -67,8 +64,9 @@ struct KoyomiWidgetView: View {
                 smallContent
             }
         }
+        .foregroundStyle(primaryColor)
         .containerBackground(for: .widget) {
-            if family == .accessoryRectangular {
+            if family == .accessoryRectangular || renderingMode != .fullColor {
                 Color.clear
             } else {
                 LinearGradient(
@@ -80,6 +78,16 @@ struct KoyomiWidgetView: View {
         }
     }
 
+    private var primaryColor: Color {
+        renderingMode == .fullColor && family != .accessoryRectangular ? .white : .primary
+    }
+
+    private var secondaryColor: Color {
+        renderingMode == .fullColor && family != .accessoryRectangular
+            ? .white.opacity(0.72)
+            : .secondary
+    }
+
     @ViewBuilder
     private var smallContent: some View {
         if let pin = entry.pins.first {
@@ -87,6 +95,7 @@ struct KoyomiWidgetView: View {
                 HStack {
                     Image(systemName: "pin.fill")
                         .foregroundStyle(Color(koyomiHex: pin.calendarColorHex))
+                        .widgetAccentable()
                     Text(pin.calendarName)
                         .font(.caption2.weight(.semibold))
                         .lineLimit(1)
@@ -97,7 +106,6 @@ struct KoyomiWidgetView: View {
                 Spacer(minLength: 2)
                 countdown(for: pin, large: true)
             }
-            .foregroundStyle(.white)
             .widgetURL(deepLink(for: pin))
         } else {
             emptyContent
@@ -112,13 +120,15 @@ struct KoyomiWidgetView: View {
             VStack(alignment: .leading, spacing: 9) {
                 Label("ピン留め", systemImage: "pin.fill")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.72))
+                    .foregroundStyle(secondaryColor)
+                    .widgetAccentable()
                 ForEach(entry.pins.prefix(3)) { pin in
                     Link(destination: deepLink(for: pin)) {
                         HStack(spacing: 10) {
                             Capsule()
                                 .fill(Color(koyomiHex: pin.calendarColorHex))
                                 .frame(width: 4, height: 31)
+                                .widgetAccentable()
                             Text(pin.title)
                                 .font(.subheadline.weight(.semibold))
                                 .lineLimit(1)
@@ -128,7 +138,6 @@ struct KoyomiWidgetView: View {
                     }
                 }
             }
-            .foregroundStyle(.white)
         }
     }
 
@@ -144,6 +153,7 @@ struct KoyomiWidgetView: View {
             .widgetURL(deepLink(for: pin))
         } else {
             Label("ピン留めなし", systemImage: "pin")
+                .widgetAccentable()
         }
     }
 
@@ -151,11 +161,12 @@ struct KoyomiWidgetView: View {
         VStack(alignment: .leading, spacing: 8) {
             Image(systemName: "pin")
                 .font(.title2)
+                .widgetAccentable()
             Text("予定をピン留め")
                 .font(.headline)
             Text("こよみを開いて、大切な予定を選んでください。")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(secondaryColor)
                 .lineLimit(3)
         }
     }
@@ -166,7 +177,7 @@ struct KoyomiWidgetView: View {
         return VStack(alignment: .leading, spacing: 1) {
             Text(isUpcoming ? "あと" : "終了まで")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(secondaryColor)
             Text(target, style: .timer)
                 .font(large ? .title3.bold().monospacedDigit() : .caption.bold().monospacedDigit())
                 .lineLimit(1)

@@ -23,10 +23,14 @@ final class KoyomiUITests: XCTestCase {
         let app = launchDemo()
         let pinButton = app.buttons["歯科検診をピン留め"]
         XCTAssertTrue(pinButton.waitForExistence(timeout: 5))
+        if !pinButton.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(pinButton.isHittable, "pin button should be visible after scrolling")
 
         pinButton.tap()
 
-        XCTAssertTrue(app.buttons["歯科検診のピン留めを解除"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["歯科検診のピン留めを解除"].waitForExistence(timeout: 5))
     }
 
     private func launchDemo() -> XCUIApplication {
