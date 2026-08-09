@@ -1,0 +1,89 @@
+name: Koyomi
+
+options:
+  bundleIdPrefix: run.kan
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    TARGETED_DEVICE_FAMILY: "1"
+    SUPPORTS_MACCATALYST: false
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.1.0"
+
+configs:
+  Debug: debug
+  Release: release
+
+targets:
+  Koyomi:
+    type: application
+    platform: iOS
+    sources:
+      - path: Koyomi
+      - path: Shared
+    resources:
+      - path: Koyomi/Assets.xcassets
+    info:
+      path: Koyomi/Info.plist
+      properties:
+        CFBundleDisplayName: こよみ
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSCalendarsFullAccessUsageDescription: 大切な予定を表示し、ピン留めするためにカレンダーを読み取ります。予定は端末の外へ送信しません。
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        CFBundleURLTypes:
+          - CFBundleURLName: run.kan.koyomi
+            CFBundleURLSchemes:
+              - koyomi
+    entitlements:
+      path: Koyomi/Koyomi.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.run.kan.koyomi
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: run.kan.koyomi
+        PRODUCT_NAME: Koyomi
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  KoyomiUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: KoyomiUITests
+    dependencies:
+      - target: Koyomi
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: run.kan.koyomi.uitests
+        TEST_TARGET_NAME: Koyomi
+        GENERATE_INFOPLIST_FILE: true
+
+schemes:
+  Koyomi:
+    build:
+      targets:
+        Koyomi: all
+        KoyomiUITests: [test]
+    test:
+      gatherCoverageData: true
+      targets:
+        - name: KoyomiUITests
+          parallelizable: false
+    run:
+      config: Debug
+    archive:
+      config: Release

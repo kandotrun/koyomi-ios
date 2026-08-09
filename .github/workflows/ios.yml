@@ -1,0 +1,70 @@
+name: iOS app
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "project.yml"
+      - "Koyomi/**"
+      - "KoyomiUITests/**"
+      - "Shared/**"
+      - ".github/workflows/ios.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Select Xcode 26.6
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Select simulator
+        id: simulator
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for runtime, xs in d["devices"].items() if "iOS-26-5" in runtime for x in xs if x["name"] == "iPhone 17 Pro"))')
+          echo "id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+      - name: UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Koyomi.xcodeproj \
+            -scheme Koyomi \
+            -destination "id=${{ steps.simulator.outputs.id }}" \
+            -derivedDataPath DerivedData \
+            -resultBundlePath TestResults.xcresult \
+            | xcbeautify
+      - name: Simulator build
+        if: always()
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Koyomi.xcodeproj \
+            -scheme Koyomi \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath DerivedData-Build \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify
+      - name: Upload test results and generated project
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: koyomi-ios-${{ github.run_id }}
+          path: |
+            TestResults.xcresult
+            Koyomi.xcodeproj
+          if-no-files-found: warn
+          retention-days: 7
