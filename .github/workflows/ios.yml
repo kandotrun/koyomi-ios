@@ -57,6 +57,12 @@ jobs:
           echo "id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
           xcrun simctl boot "$DEVICE_ID"
           xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl spawn "$DEVICE_ID" defaults write NSGlobalDomain AppleLocale "ja_JP"
+          xcrun simctl spawn "$DEVICE_ID" defaults write NSGlobalDomain AppleLanguages -array "ja-JP"
+          xcrun simctl spawn "$DEVICE_ID" defaults write NSGlobalDomain AppleICUForce24HourTime -bool true
+          xcrun simctl shutdown "$DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID"
+          xcrun simctl bootstatus "$DEVICE_ID" -b
       - name: UI tests
         run: |
           set -o pipefail

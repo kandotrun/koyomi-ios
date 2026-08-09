@@ -30,6 +30,7 @@
 		73546A8416E6DF9530A96D19 /* KoyomiWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FB3CE0781720749F4DF2A314 /* KoyomiWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7654DD680328AB7560540BC7 /* KoyomiWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CACB6CCD0868289E07DB93B /* KoyomiWidget.swift */; };
 		7A545595BB619A6B07455A26 /* PinnedEventReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF34F71291E2660C334489AB /* PinnedEventReconciler.swift */; };
+		860FCF93EF3B5F86920A4000 /* WidgetTimelinePlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAAD92B102AE36E10B0E13D0 /* WidgetTimelinePlanner.swift */; };
 		8681A1C66E7C87994FA10F9C /* PinnedEventsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F818DF57832711712CB0222D /* PinnedEventsSection.swift */; };
 		8F4E84A9D7C6FC80A4575852 /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BBBBD48AF040304792AC9C5 /* Placeholder.swift */; };
 		92B61F8768CD0165436290AD /* AgendaBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 590990DA39DE4B632A5B4958 /* AgendaBuilder.swift */; };
@@ -41,6 +42,7 @@
 		C05FD9A825F0021970BAFF35 /* CalendarLoadWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1103A1BC2A3F59C884BEE460 /* CalendarLoadWindow.swift */; };
 		C4D4C7B17AF62FF562836EF0 /* Color+Koyomi.swift in Sources */ = {isa = PBXBuildFile; fileRef = D73D6A318C6B4C7727545D53 /* Color+Koyomi.swift */; };
 		DF18A4CAEE72BD87DCDCFB31 /* DateStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4984A43D22BA936ABC10320C /* DateStrip.swift */; };
+		EDF2AA0E535CDD57D60DD8AE /* WidgetTimelinePlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAAD92B102AE36E10B0E13D0 /* WidgetTimelinePlanner.swift */; };
 		F2433A25F19C84377928BE2E /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F3FA2031FF1EBF616DCFA7 /* CalendarViewModel.swift */; };
 		F4C4EF08A8FC63DEE81E0ED6 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37633EB26F2B2B7F8F015F8 /* AppDependencies.swift */; };
 		FD5C644FBC40B7A133D322CC /* PinnedEventsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E29AC82812B943A27E0A799 /* PinnedEventsStore.swift */; };
@@ -104,6 +106,7 @@
 		AF34F71291E2660C334489AB /* PinnedEventReconciler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedEventReconciler.swift; sourceTree = "<group>"; };
 		B6ACB0756FF66285FE3725C4 /* KoyomiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoyomiApp.swift; sourceTree = "<group>"; };
 		C40AC52DA1A4733E4249FC37 /* KoyomiStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoyomiStyle.swift; sourceTree = "<group>"; };
+		CAAD92B102AE36E10B0E13D0 /* WidgetTimelinePlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTimelinePlanner.swift; sourceTree = "<group>"; };
 		D2E449C85D0D88E234964441 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D73D6A318C6B4C7727545D53 /* Color+Koyomi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Koyomi.swift"; sourceTree = "<group>"; };
 		E37633EB26F2B2B7F8F015F8 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
@@ -138,6 +141,7 @@
 				8E29AC82812B943A27E0A799 /* PinnedEventsStore.swift */,
 				9BBBBD48AF040304792AC9C5 /* Placeholder.swift */,
 				3C62CA929BBD3BDACDBF225E /* WidgetPinSelector.swift */,
+				CAAD92B102AE36E10B0E13D0 /* WidgetTimelinePlanner.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -335,6 +339,7 @@
 				12293288989B265D1CBE6695 /* PinnedEventsStore.swift in Sources */,
 				8F4E84A9D7C6FC80A4575852 /* Placeholder.swift in Sources */,
 				5FF2CDFC74B3B3CB91BE2445 /* WidgetPinSelector.swift in Sources */,
+				860FCF93EF3B5F86920A4000 /* WidgetTimelinePlanner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,6 +366,7 @@
 				FD5C644FBC40B7A133D322CC /* PinnedEventsStore.swift in Sources */,
 				1527E5BF4E05B1B8060631AE /* Placeholder.swift in Sources */,
 				4EBD6A0C20BF391A524B7D87 /* WidgetPinSelector.swift in Sources */,
+				EDF2AA0E535CDD57D60DD8AE /* WidgetTimelinePlanner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
