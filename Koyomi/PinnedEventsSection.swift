@@ -105,7 +105,8 @@ private struct PinnedCountdownCard: View {
             .foregroundStyle(.secondary)
         }
         .padding(20)
-        .frame(width: 330, minHeight: 194, alignment: .topLeading)
+        .frame(width: 330, alignment: .topLeading)
+        .frame(minHeight: 194, alignment: .topLeading)
         .contentShape(.rect)
         .onTapGesture(perform: onOpen)
         .koyomiGlass(tint: tint, cornerRadius: 28, interactive: true)

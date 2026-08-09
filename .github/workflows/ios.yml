@@ -29,6 +29,17 @@ jobs:
         run: brew install xcodegen
       - name: Generate project
         run: xcodegen generate
+      - name: Simulator build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Koyomi.xcodeproj \
+            -scheme Koyomi \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath DerivedData-Build \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify
       - name: Select simulator
         id: simulator
         run: |
@@ -45,18 +56,6 @@ jobs:
             -destination "id=${{ steps.simulator.outputs.id }}" \
             -derivedDataPath DerivedData \
             -resultBundlePath TestResults.xcresult \
-            | xcbeautify
-      - name: Simulator build
-        if: always()
-        run: |
-          set -o pipefail
-          xcodebuild build \
-            -project Koyomi.xcodeproj \
-            -scheme Koyomi \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath DerivedData-Build \
-            CODE_SIGNING_ALLOWED=NO \
             | xcbeautify
       - name: Upload test results and generated project
         if: always()
