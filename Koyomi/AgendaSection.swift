@@ -74,13 +74,13 @@ private struct AgendaEventRow: View {
                         HStack(spacing: 6) {
                             Text(event.calendarName)
                             if let location = event.location {
-                                Text("•")
-                                Text(location)
+                                Label(location, systemImage: "mappin")
+                                    .labelStyle(.titleAndIcon)
                                     .lineLimit(1)
                             }
                         }
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.68))
                     }
                     Spacer(minLength: 4)
                 }
@@ -91,7 +91,7 @@ private struct AgendaEventRow: View {
             Button(action: onTogglePin) {
                 Image(systemName: isPinned ? "pin.fill" : "pin")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(isPinned ? tint : .secondary)
+                    .foregroundStyle(isPinned ? tint : .primary.opacity(0.58))
                     .frame(width: 38, height: 38)
             }
             .accessibilityLabel(isPinned ? "\(event.title)のピン留めを解除" : "\(event.title)をピン留め")
@@ -107,6 +107,8 @@ private struct AgendaEventRow: View {
 
     private var timeText: String {
         if event.isAllDay { return "終日" }
-        return event.startDate.formatted(date: .omitted, time: .shortened)
+        return event.startDate.formatted(
+            .dateTime.hour().minute().locale(Locale(identifier: "ja_JP"))
+        )
     }
 }

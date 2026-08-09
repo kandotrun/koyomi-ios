@@ -31,7 +31,7 @@ struct KoyomiRootView: View {
                         Button {
                             model.selectToday()
                         } label: {
-                            Image(systemName: "scope")
+                            Text("今日")
                         }
                         .accessibilityLabel("今日へ移動")
 
@@ -41,13 +41,6 @@ struct KoyomiRootView: View {
                             Image(systemName: "calendar")
                         }
                         .accessibilityLabel("日付を選ぶ")
-
-                        Button {
-                            model.refresh()
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                        }
-                        .accessibilityLabel("予定を更新")
                     }
                 }
             }

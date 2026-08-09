@@ -12,6 +12,7 @@ final class KoyomiUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["こよみ"].waitForExistence(timeout: 5), "navigation title")
         XCTAssertTrue(app.descendants(matching: .any)["pinned-section"].waitForExistence(timeout: 2), "pinned section")
         XCTAssertTrue(app.staticTexts["プロジェクト発表"].exists, "seeded pinned event")
+        XCTAssertTrue(app.descendants(matching: .any)["month-title"].exists, "month and year context")
         XCTAssertTrue(app.descendants(matching: .any)["date-strip"].exists, "date strip")
         XCTAssertTrue(app.descendants(matching: .any)["agenda-list"].exists, "agenda list")
         XCTAssertTrue(app.staticTexts["歯科検診"].exists, "demo agenda event")

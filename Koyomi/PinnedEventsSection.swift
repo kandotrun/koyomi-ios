@@ -62,12 +62,12 @@ private struct PinnedCountdownCard: View {
     private var tint: Color { Color(koyomiHex: pin.calendarColorHex) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 13) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(pin.calendarName)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.68))
                     Text(pin.title)
                         .font(.title3.bold())
                         .lineLimit(2)
@@ -87,7 +87,7 @@ private struct PinnedCountdownCard: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(presentation.label)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.68))
                     Text(presentation.value)
                         .font(.system(.title2, design: .rounded, weight: .bold))
                         .monospacedDigit()
@@ -102,11 +102,11 @@ private struct PinnedCountdownCard: View {
                     .lineLimit(1)
             }
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.primary.opacity(0.68))
         }
-        .padding(20)
+        .padding(18)
         .frame(width: 330, alignment: .topLeading)
-        .frame(minHeight: 194, alignment: .topLeading)
+        .frame(minHeight: 174, alignment: .topLeading)
         .contentShape(.rect)
         .onTapGesture(perform: onOpen)
         .koyomiGlass(tint: tint, cornerRadius: 28, interactive: true)

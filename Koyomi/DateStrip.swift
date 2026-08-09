@@ -4,23 +4,34 @@ struct DateStrip: View {
     @ObservedObject var model: CalendarViewModel
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 9) {
-                ForEach(model.dateChoices, id: \.self) { date in
-                    DateChip(
-                        date: date,
-                        isSelected: Calendar.current.isDate(date, inSameDayAs: model.selectedDate),
-                        isToday: Calendar.current.isDateInToday(date),
-                        onSelect: { model.selectDate(date) }
-                    )
-                }
-            }
+        VStack(alignment: .leading, spacing: 10) {
+            Text(
+                model.selectedDate.formatted(
+                    .dateTime.year().month(.wide).locale(Locale(identifier: "ja_JP"))
+                )
+            )
+            .font(.headline)
             .padding(.horizontal, 20)
-            .padding(.vertical, 4)
+            .accessibilityIdentifier("month-title")
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 9) {
+                    ForEach(model.dateChoices, id: \.self) { date in
+                        DateChip(
+                            date: date,
+                            isSelected: Calendar.current.isDate(date, inSameDayAs: model.selectedDate),
+                            isToday: Calendar.current.isDateInToday(date),
+                            onSelect: { model.selectDate(date) }
+                        )
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 4)
+            }
+            .scrollIndicators(.hidden)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("date-strip")
         }
-        .scrollIndicators(.hidden)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("date-strip")
     }
 }
 
@@ -35,7 +46,7 @@ private struct DateChip: View {
             VStack(spacing: 5) {
                 Text(date.formatted(.dateTime.weekday(.narrow).locale(Locale(identifier: "ja_JP"))))
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(isSelected ? .primary : .secondary)
+                    .foregroundStyle(isSelected ? .primary : .primary.opacity(0.62))
                 Text(date.formatted(.dateTime.day()))
                     .font(.headline.monospacedDigit())
                 Circle()

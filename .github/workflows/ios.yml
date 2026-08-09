@@ -59,7 +59,7 @@ jobs:
             | xcbeautify
       - name: Capture demo screenshot
         run: |
-          xcrun simctl status_bar "${{ steps.simulator.outputs.id }}" override --time "9:41" --batteryState charged --batteryLevel 100
+          xcrun simctl status_bar "${{ steps.simulator.outputs.id }}" override --batteryState charged --batteryLevel 100
           xcrun simctl launch --terminate-running-process "${{ steps.simulator.outputs.id }}" run.kan.koyomi -ui-testing
           sleep 2
           xcrun simctl io "${{ steps.simulator.outputs.id }}" screenshot Koyomi.png
