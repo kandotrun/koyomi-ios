@@ -26,6 +26,7 @@
 		2FF7C42F42785890DC8DAED3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D2E449C85D0D88E234964441 /* Assets.xcassets */; };
 		3F9989FB071AC75427D67EF5 /* UpcomingAgendaBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31324131442AED11352E9912 /* UpcomingAgendaBuilder.swift */; };
 		442C20539936EF1AF7E48EE4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 871AE47A793125540FE897E1 /* PrivacyInfo.xcprivacy */; };
+		4AF1188D52539C7C3860959B /* WidgetPinLayoutCapacity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D12AB9374503E27EAE12CB4 /* WidgetPinLayoutCapacity.swift */; };
 		4E3C38AEE4EFD47A6973B3F0 /* PinnedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1CFB02B7A8B325AD32CE2A /* PinnedEvent.swift */; };
 		4EBD6A0C20BF391A524B7D87 /* WidgetPinSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C62CA929BBD3BDACDBF225E /* WidgetPinSelector.swift */; };
 		558D7B61FB46C3725CD2A4C9 /* EventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6959C08E100EF3CFC2F19D70 /* EventDetailView.swift */; };
@@ -45,6 +46,7 @@
 		8F4E84A9D7C6FC80A4575852 /* Placeholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BBBBD48AF040304792AC9C5 /* Placeholder.swift */; };
 		92B61F8768CD0165436290AD /* AgendaBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 590990DA39DE4B632A5B4958 /* AgendaBuilder.swift */; };
 		986C631780953CEFA8E7702F /* CalendarLoadWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1103A1BC2A3F59C884BEE460 /* CalendarLoadWindow.swift */; };
+		9F3A62A05C51182ED3A0704C /* WidgetPinLayoutCapacity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D12AB9374503E27EAE12CB4 /* WidgetPinLayoutCapacity.swift */; };
 		9F5C41BAD035E14CCF3C3600 /* CalendarPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E0C97D22E7C9246CBAB9C0 /* CalendarPermissionView.swift */; };
 		A630E20CBFB00E6BDB912760 /* UpcomingAgendaBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31324131442AED11352E9912 /* UpcomingAgendaBuilder.swift */; };
 		AEC896FEBF3B73A10D5DB4EC /* PinnedEventReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF34F71291E2660C334489AB /* PinnedEventReconciler.swift */; };
@@ -118,6 +120,7 @@
 		7E6FF709061F4E354148D1EC /* EventKitCalendarSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventKitCalendarSource.swift; sourceTree = "<group>"; };
 		810121827E1DE57F340D2D19 /* CalendarFilterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarFilterSheet.swift; sourceTree = "<group>"; };
 		871AE47A793125540FE897E1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		8D12AB9374503E27EAE12CB4 /* WidgetPinLayoutCapacity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPinLayoutCapacity.swift; sourceTree = "<group>"; };
 		8E29AC82812B943A27E0A799 /* PinnedEventsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedEventsStore.swift; sourceTree = "<group>"; };
 		90E39775AD021E8C124E69CA /* KoyomiHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoyomiHaptics.swift; sourceTree = "<group>"; };
 		9BBBBD48AF040304792AC9C5 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
@@ -168,6 +171,7 @@
 				8E29AC82812B943A27E0A799 /* PinnedEventsStore.swift */,
 				9BBBBD48AF040304792AC9C5 /* Placeholder.swift */,
 				31324131442AED11352E9912 /* UpcomingAgendaBuilder.swift */,
+				8D12AB9374503E27EAE12CB4 /* WidgetPinLayoutCapacity.swift */,
 				3C62CA929BBD3BDACDBF225E /* WidgetPinSelector.swift */,
 				CAAD92B102AE36E10B0E13D0 /* WidgetTimelinePlanner.swift */,
 			);
@@ -396,6 +400,7 @@
 				8F4E84A9D7C6FC80A4575852 /* Placeholder.swift in Sources */,
 				A630E20CBFB00E6BDB912760 /* UpcomingAgendaBuilder.swift in Sources */,
 				63A1B6B998924A9614E5B212 /* UpcomingEventsSection.swift in Sources */,
+				9F3A62A05C51182ED3A0704C /* WidgetPinLayoutCapacity.swift in Sources */,
 				5FF2CDFC74B3B3CB91BE2445 /* WidgetPinSelector.swift in Sources */,
 				860FCF93EF3B5F86920A4000 /* WidgetTimelinePlanner.swift in Sources */,
 			);
@@ -427,6 +432,7 @@
 				FD5C644FBC40B7A133D322CC /* PinnedEventsStore.swift in Sources */,
 				1527E5BF4E05B1B8060631AE /* Placeholder.swift in Sources */,
 				3F9989FB071AC75427D67EF5 /* UpcomingAgendaBuilder.swift in Sources */,
+				4AF1188D52539C7C3860959B /* WidgetPinLayoutCapacity.swift in Sources */,
 				4EBD6A0C20BF391A524B7D87 /* WidgetPinSelector.swift in Sources */,
 				EDF2AA0E535CDD57D60DD8AE /* WidgetTimelinePlanner.swift in Sources */,
 			);

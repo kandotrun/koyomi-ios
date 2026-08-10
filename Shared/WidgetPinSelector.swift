@@ -1,6 +1,13 @@
 import Foundation
 
 public enum WidgetPinSelector {
+    public static func activePinCount(
+        from events: [PinnedEvent],
+        at now: Date = .now
+    ) -> Int {
+        events.lazy.filter { $0.endDate > now }.count
+    }
+
     public static func activePins(
         from events: [PinnedEvent],
         at now: Date = .now,

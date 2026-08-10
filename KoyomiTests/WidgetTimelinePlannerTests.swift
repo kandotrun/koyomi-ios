@@ -31,6 +31,143 @@ final class WidgetTimelinePlannerTests: XCTestCase {
         )
     }
 
+    func testZeroLimitProducesOnlyTheCurrentEntry() {
+        let future = pin(
+            id: "future",
+            start: now.addingTimeInterval(20),
+            end: now.addingTimeInterval(30)
+        )
+
+        XCTAssertEqual(
+            WidgetTimelinePlanner.states(from: [future], at: now, limit: 0),
+            [WidgetTimelineState(date: now, pins: [])]
+        )
+    }
+
+    func testNegativeTransitionOffsetIsClampedToZero() {
+        let future = pin(
+            id: "future",
+            start: now.addingTimeInterval(10),
+            end: now.addingTimeInterval(20)
+        )
+
+        XCTAssertEqual(WidgetTimelinePlanner.normalizedTransitionOffset(-1), 0)
+        XCTAssertEqual(
+            WidgetTimelinePlanner.states(
+                from: [future],
+                at: now,
+                limit: 1,
+                transitionOffset: -1
+            ).map(\.date),
+            [now, now.addingTimeInterval(10), now.addingTimeInterval(20)]
+        )
+    }
+
+    func testCapsTimelineEntryCountAtAPlannedBoundary() {
+        let futurePins = (1...100).map { index in
+            pin(
+                id: "future-\(index)",
+                start: now.addingTimeInterval(TimeInterval(index * 10)),
+                end: now.addingTimeInterval(TimeInterval(index * 10 + 5))
+            )
+        }
+
+        let states = WidgetTimelinePlanner.states(
+            from: futurePins,
+            at: now,
+            limit: 1,
+            transitionOffset: 0,
+            maximumEntryCount: 4
+        )
+
+        XCTAssertEqual(WidgetTimelinePlanner.defaultMaximumEntryCount, 64)
+        XCTAssertEqual(states.count, 4)
+        XCTAssertEqual(
+            states.map(\.date),
+            [
+                now,
+                now.addingTimeInterval(10),
+                now.addingTimeInterval(15),
+                now.addingTimeInterval(20)
+            ]
+        )
+    }
+
+    func testNonPositiveMaximumEntryCountKeepsOnlyTheCurrentEntry() {
+        let future = pin(
+            id: "future",
+            start: now.addingTimeInterval(10),
+            end: now.addingTimeInterval(20)
+        )
+
+        XCTAssertEqual(
+            WidgetTimelinePlanner.states(
+                from: [future],
+                at: now,
+                limit: 1,
+                maximumEntryCount: 0
+            ),
+            [WidgetTimelineState(date: now, pins: [future])]
+        )
+    }
+
+    func testSchedulesBoundariesForPinThatEntersAfterAVisiblePinEnds() {
+        let first = pin(id: "first", start: now.addingTimeInterval(-100), end: now.addingTimeInterval(10))
+        let longRunning = ["b", "c", "d", "e", "f", "g"].map { id in
+            pin(id: id, start: now.addingTimeInterval(-100), end: now.addingTimeInterval(1_000))
+        }
+        let replacement = pin(
+            id: "replacement",
+            start: now.addingTimeInterval(20),
+            end: now.addingTimeInterval(30)
+        )
+
+        let states = WidgetTimelinePlanner.states(
+            from: [first] + longRunning + [replacement],
+            at: now,
+            limit: 7
+        )
+
+        XCTAssertEqual(states.map(\.date), [
+            now,
+            now.addingTimeInterval(12),
+            now.addingTimeInterval(22),
+            now.addingTimeInterval(32),
+            now.addingTimeInterval(1_002)
+        ])
+        guard states.count == 5 else { return }
+        XCTAssertEqual(states[1].pins.map(\.id), ["b", "c", "d", "e", "f", "g", "replacement"])
+        XCTAssertEqual(states[2].pins.map(\.id), ["replacement", "b", "c", "d", "e", "f", "g"])
+        XCTAssertEqual(states[3].pins.map(\.id), ["b", "c", "d", "e", "f", "g"])
+    }
+
+    func testSchedulesStartForOverflowPinThatBecomesOngoingBeforeVisiblePinsEnd() {
+        let longRunning = ["b", "c", "d", "e", "f", "g", "h"].map { id in
+            pin(id: id, start: now.addingTimeInterval(-100), end: now.addingTimeInterval(1_000))
+        }
+        let replacement = pin(
+            id: "replacement",
+            start: now.addingTimeInterval(20),
+            end: now.addingTimeInterval(30)
+        )
+
+        let states = WidgetTimelinePlanner.states(
+            from: longRunning + [replacement],
+            at: now,
+            limit: 7
+        )
+
+        XCTAssertEqual(states.map(\.date), [
+            now,
+            now.addingTimeInterval(22),
+            now.addingTimeInterval(32),
+            now.addingTimeInterval(1_002)
+        ])
+        guard states.count == 4 else { return }
+        XCTAssertEqual(states[1].pins.map(\.id), ["replacement", "b", "c", "d", "e", "f", "g"])
+        XCTAssertEqual(states[2].pins.map(\.id), ["b", "c", "d", "e", "f", "g", "h"])
+    }
+
     private func pin(id: String, start: Date, end: Date) -> PinnedEvent {
         PinnedEvent(
             id: id,

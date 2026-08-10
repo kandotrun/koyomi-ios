@@ -31,6 +31,48 @@ final class WidgetPinSelectorTests: XCTestCase {
         XCTAssertEqual(WidgetPinSelector.activePins(from: [first], at: now, limit: 0), [])
     }
 
+    func testActivePinCountIncludesOverflowPinsAndDropsEndedPins() {
+        let ended = makeEvent(id: "ended", start: -120, end: -60)
+        let active = (0..<8).map { index in
+            makeEvent(
+                id: "active-\(index)",
+                start: TimeInterval(index * 60),
+                end: TimeInterval((index + 10) * 60)
+            )
+        }
+
+        XCTAssertEqual(
+            WidgetPinSelector.activePinCount(from: [ended] + active, at: now),
+            8
+        )
+    }
+
+    func testWidgetLayoutCapacityShowsMorePinsInTheLargeFamily() {
+        XCTAssertEqual(WidgetPinLayoutCapacity.single, 1)
+        XCTAssertEqual(WidgetPinLayoutCapacity.medium, 3)
+        XCTAssertEqual(WidgetPinLayoutCapacity.large, 7)
+        XCTAssertEqual(WidgetPinLayoutCapacity.mediumVisibleLimits(isAccessibilitySize: false), [3])
+        XCTAssertEqual(WidgetPinLayoutCapacity.mediumVisibleLimits(isAccessibilitySize: true), [3, 2, 1])
+        XCTAssertEqual(WidgetPinLayoutCapacity.largeVisibleLimits(isAccessibilitySize: false), [7, 6, 5])
+        XCTAssertEqual(WidgetPinLayoutCapacity.largeVisibleLimits(isAccessibilitySize: true), [4, 3, 2, 1])
+        XCTAssertEqual(WidgetPinLayoutCapacity.hiddenCount(totalPins: 7, visibleLimit: 6), 1)
+        XCTAssertEqual(WidgetPinLayoutCapacity.hiddenCount(totalPins: 7, visibleLimit: 7), 0)
+        XCTAssertEqual(WidgetPinLayoutCapacity.hiddenCount(totalPins: 2, visibleLimit: 4), 0)
+        XCTAssertEqual(WidgetPinLayoutCapacity.titleLineLimit(isAccessibilitySize: false), 1)
+        XCTAssertEqual(WidgetPinLayoutCapacity.titleLineLimit(isAccessibilitySize: true), 3)
+    }
+
+    func testAccessibilityCountdownColumnExpandsWithoutTakingTheWholeRow() {
+        XCTAssertEqual(
+            WidgetPinLayoutCapacity.countdownColumnWidth(isAccessibilitySize: false),
+            86
+        )
+        XCTAssertEqual(
+            WidgetPinLayoutCapacity.countdownColumnWidth(isAccessibilitySize: true),
+            132
+        )
+    }
+
     func testOccurrenceIdentifierIsStableButSeparatesRecurringInstances() {
         let firstStart = now.addingTimeInterval(86_400)
         let secondStart = now.addingTimeInterval(2 * 86_400)
