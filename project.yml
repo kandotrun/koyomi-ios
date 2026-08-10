@@ -30,11 +30,11 @@ targets:
     sources:
       - path: Koyomi
       - path: Shared
-    resources:
-      - path: Koyomi/Assets.xcassets
       - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
         type: file
+    resources:
+      - path: Koyomi/Assets.xcassets
     dependencies:
       - target: KoyomiWidget
         embed: true
@@ -72,7 +72,6 @@ targets:
     sources:
       - path: KoyomiWidget
       - path: Shared
-    resources:
       - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
         type: file

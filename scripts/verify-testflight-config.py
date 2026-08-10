@@ -39,12 +39,13 @@ def main() -> None:
     assert "archive:\n      config: Release" in project, "Koyomi scheme must archive Release"
 
     expected_resources = (
-        "- path: Resources/PrivacyInfo.xcprivacy\n"
+        "- path: Shared\n"
+        "      - path: Resources/PrivacyInfo.xcprivacy\n"
         "        buildPhase: resources\n"
         "        type: file"
     )
     assert project.count(expected_resources) == 2, (
-        "privacy manifest must be an explicit resource in app and widget targets"
+        "privacy manifest must be an explicit resources build-phase source in app and widget targets"
     )
 
     app_info = load_plist("Koyomi/Info.plist")
