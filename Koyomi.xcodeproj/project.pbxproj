@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		045B3EAA230E94AF59DF3A5E /* CalendarEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112838AE9C4A16865962C93F /* CalendarEvent.swift */; };
+		050A952E0A7F54A004F50E90 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 871AE47A793125540FE897E1 /* PrivacyInfo.xcprivacy */; };
 		077F99E06671B710CF69C787 /* AgendaBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 590990DA39DE4B632A5B4958 /* AgendaBuilder.swift */; };
 		079BBE169ACA259D299BDD67 /* KoyomiRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3521CB4B28E33912C9874D53 /* KoyomiRootView.swift */; };
 		12293288989B265D1CBE6695 /* PinnedEventsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E29AC82812B943A27E0A799 /* PinnedEventsStore.swift */; };
@@ -18,6 +19,7 @@
 		2A457C63C4E6F1F487D3F1A2 /* Color+Koyomi.swift in Sources */ = {isa = PBXBuildFile; fileRef = D73D6A318C6B4C7727545D53 /* Color+Koyomi.swift */; };
 		2EFDF1EA90971D8457D8423B /* KoyomiStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40AC52DA1A4733E4249FC37 /* KoyomiStyle.swift */; };
 		2FF7C42F42785890DC8DAED3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D2E449C85D0D88E234964441 /* Assets.xcassets */; };
+		442C20539936EF1AF7E48EE4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 871AE47A793125540FE897E1 /* PrivacyInfo.xcprivacy */; };
 		4E3C38AEE4EFD47A6973B3F0 /* PinnedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1CFB02B7A8B325AD32CE2A /* PinnedEvent.swift */; };
 		4EBD6A0C20BF391A524B7D87 /* WidgetPinSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C62CA929BBD3BDACDBF225E /* WidgetPinSelector.swift */; };
 		558D7B61FB46C3725CD2A4C9 /* EventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6959C08E100EF3CFC2F19D70 /* EventDetailView.swift */; };
@@ -99,6 +101,7 @@
 		6959C08E100EF3CFC2F19D70 /* EventDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailView.swift; sourceTree = "<group>"; };
 		6F4FF3EB5CE5939F55F64DB2 /* DemoCalendarSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCalendarSource.swift; sourceTree = "<group>"; };
 		7E6FF709061F4E354148D1EC /* EventKitCalendarSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventKitCalendarSource.swift; sourceTree = "<group>"; };
+		871AE47A793125540FE897E1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		8E29AC82812B943A27E0A799 /* PinnedEventsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedEventsStore.swift; sourceTree = "<group>"; };
 		9BBBBD48AF040304792AC9C5 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
 		9BEE36C94DDD44E8918BDD1C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -123,6 +126,7 @@
 				C2A90AF1BCE027AAE90C88B7 /* Koyomi */,
 				81EA33A6EE672F40B0B03058 /* KoyomiUITests */,
 				6FD809159A8715FEFE68EA90 /* KoyomiWidget */,
+				88F880741A65ED7D4C1ADDCA /* Resources */,
 				64D0CFB934ED8C69CD6A75A1 /* Shared */,
 				89DACDF4268A6882F5DE23CE /* Products */,
 			);
@@ -162,6 +166,14 @@
 				5A6358604FBE82CE0EB903C4 /* KoyomiUITests.swift */,
 			);
 			path = KoyomiUITests;
+			sourceTree = "<group>";
+		};
+		88F880741A65ED7D4C1ADDCA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				871AE47A793125540FE897E1 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		89DACDF4268A6882F5DE23CE /* Products */ = {
@@ -243,6 +255,7 @@
 			buildConfigurationList = E17EFB9FE671BF9970CAE03C /* Build configuration list for PBXNativeTarget "KoyomiWidget" */;
 			buildPhases = (
 				E5263E3C559730D374E18FE7 /* Sources */,
+				B28E72F63A7CA936E47ADF36 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -265,16 +278,16 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					49DC4B9623542389FF59A8D5 = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = UGNVGWZMAU;
 						ProvisioningStyle = Automatic;
 						TestTargetID = 86997D887D202BE1995D8E76;
 					};
 					86997D887D202BE1995D8E76 = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = UGNVGWZMAU;
 						ProvisioningStyle = Automatic;
 					};
 					BE8A11FD83AA030981B3B09B = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = UGNVGWZMAU;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -301,11 +314,20 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		B28E72F63A7CA936E47ADF36 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				442C20539936EF1AF7E48EE4 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BDE473048ED6BCD1D517F7A8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				2FF7C42F42785890DC8DAED3 /* Assets.xcassets in Resources */,
+				050A952E0A7F54A004F50E90 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -440,7 +462,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = UGNVGWZMAU;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -458,7 +480,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 1.0.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -565,7 +587,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = UGNVGWZMAU;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -577,7 +599,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 1.0.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
