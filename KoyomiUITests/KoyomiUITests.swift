@@ -19,6 +19,24 @@ final class KoyomiUITests: XCTestCase {
         XCTAssertTrue(app.buttons["歯科検診をピン留め"].exists, "pin action")
     }
 
+    func testTagFilterShowsCleanTitlesAndNarrowsTheAgenda() {
+        let app = launchDemo()
+
+        let tagFilter = app.descendants(matching: .any)["event-tag-filter"]
+        XCTAssertTrue(tagFilter.waitForExistence(timeout: 5), "tag filter")
+        XCTAssertTrue(app.staticTexts["集中作業"].exists, "clean event title")
+        XCTAssertFalse(app.staticTexts["集中作業 #仕事 #タスク"].exists, "raw tagged title must not leak into UI")
+        XCTAssertTrue(app.descendants(matching: .any)["event-tag-chip-タスク"].exists, "tag chip")
+
+        let taskFilter = app.buttons["event-tag-filter-タスク"]
+        XCTAssertTrue(taskFilter.exists)
+        taskFilter.tap()
+
+        XCTAssertTrue(app.staticTexts["集中作業"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["歯科検診"].waitForNonExistence(timeout: 2))
+        attachScreenshot(of: app, name: "Task tag filter")
+    }
+
     func testPinButtonAddsAnAgendaEventToPinnedEvents() {
         let app = launchDemo()
         let pinButton = app.buttons["歯科検診をピン留め"]

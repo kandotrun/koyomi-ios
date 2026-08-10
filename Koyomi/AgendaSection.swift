@@ -56,6 +56,8 @@ struct AgendaEventRow: View {
     let onTogglePin: () -> Void
 
     private var tint: Color { Color(koyomiHex: event.calendarColorHex) }
+    private var metadata: EventTitleMetadata { event.titleMetadata }
+    private var showsCalendarName: Bool { !metadata.containsTag(event.calendarName) }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -73,20 +75,25 @@ struct AgendaEventRow: View {
                         .frame(width: 58, alignment: .leading)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(event.title)
+                        Text(metadata.displayTitle)
                             .font(.body.weight(.semibold))
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
-                        HStack(spacing: 6) {
-                            Text(event.calendarName)
-                            if let location = event.location {
-                                Label(location, systemImage: "mappin")
-                                    .labelStyle(.titleAndIcon)
-                                    .lineLimit(1)
+                        EventTagSummary(tags: metadata.tags)
+                        if showsCalendarName || event.location != nil {
+                            HStack(spacing: 6) {
+                                if showsCalendarName {
+                                    Text(event.calendarName)
+                                }
+                                if let location = event.location {
+                                    Label(location, systemImage: "mappin")
+                                        .labelStyle(.titleAndIcon)
+                                        .lineLimit(1)
+                                }
                             }
+                            .font(.caption)
+                            .foregroundStyle(.primary.opacity(0.74))
                         }
-                        .font(.caption)
-                        .foregroundStyle(.primary.opacity(0.74))
                     }
                     Spacer(minLength: 4)
                 }
@@ -100,7 +107,11 @@ struct AgendaEventRow: View {
                     .foregroundStyle(isPinned ? tint : Color.primary.opacity(0.74))
                     .frame(width: 44, height: 44)
             }
-            .accessibilityLabel(isPinned ? "\(event.title)のピン留めを解除" : "\(event.title)をピン留め")
+            .accessibilityLabel(
+                isPinned
+                    ? "\(metadata.displayTitle)のピン留めを解除"
+                    : "\(metadata.displayTitle)をピン留め"
+            )
         }
         .padding(14)
         .frame(minHeight: 78)

@@ -4,6 +4,7 @@
 
 Koyomi（表示名「こよみ」）は、iOS 26以降向けの端末内完結カレンダービューアです。
 EventKitの予定を読み、選んだ予定をピン留めし、アプリとWidgetKitウィジェットで開始・終了までを表示します。
+予定名の空白区切り`#タグ`は、元タイトルを変更せず本文とチップに分けて表示・絞り込みします。
 バックエンド、アカウント、分析SDKは追加しません。
 
 ## Engineering rules
@@ -11,11 +12,15 @@ EventKitの予定を読み、選んだ予定をピン留めし、アプリとWid
 1. 新しい挙動は RED → GREEN → REFACTOR。先に失敗するテストを追加し、その失敗を確認する。
 2. カウントダウン・ピン選択・保存・日付境界は `KoyomiCore` の純粋ロジックとしてテストする。
 3. EventKitは `@MainActor` のアダプタに閉じ込め、テスト/Preview/UIテストではサンプルデータ源に差し替える。
-4. Calendarの内容は端末外へ送らない。ログにもタイトル、場所、参加者、URLを出さない。
+4. iOSアプリがEventKitから取得したCalendar内容は端末外へ送らない。ログにもタイトル、場所、参加者、URLを出さない。
 5. 共有Keychainに保存するのはピン留めした予定の表示スナップショットだけ。
 6. Liquid Glassは標準ナビゲーション・ツールバーを優先し、カスタムglassEffectを乱用しない。
 7. VoiceOver、文字サイズ、Reduce Motion、Reduce Transparency、ダークモードを壊さない。
 8. iOS deployment targetは26.0。Swift 6の警告を放置しない。
+9. タグ処理は`EventTitleMetadata`に集約し、EventKit由来のraw titleとピンスナップショットを変更しない。
+10. Hermes連携はGoogle Calendarを正本とするアプリ外の運用境界に置き、トークンやagent endpointをiOSアプリへ埋め込まない。
+
+タグ記法とHermes運用契約は`docs/calendar-title-tags.md`を参照してください。
 
 ## Verification
 

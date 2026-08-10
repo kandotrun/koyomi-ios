@@ -9,6 +9,7 @@ final class CalendarViewModel: ObservableObject {
     @Published private(set) var upcomingEvents: [CalendarEvent] = []
     @Published private(set) var calendars: [CalendarDescriptor] = []
     @Published private(set) var selectedCalendarIDs: Set<String> = []
+    @Published private(set) var selectedTag: String?
     @Published private(set) var pinnedEvents: [PinnedEvent]
     @Published private(set) var isLoading = false
     @Published var selectedDate: Date
@@ -40,11 +41,22 @@ final class CalendarViewModel: ObservableObject {
     }
 
     var agendaEvents: [CalendarEvent] {
-        AgendaBuilder.events(on: selectedDate, from: events, calendar: calendar)
+        EventTagIndex.events(
+            from: AgendaBuilder.events(on: selectedDate, from: events, calendar: calendar),
+            matching: selectedTag
+        )
     }
 
     var upcomingSections: [UpcomingAgendaSection] {
-        UpcomingAgendaBuilder.sections(from: upcomingEvents, now: now(), calendar: calendar)
+        UpcomingAgendaBuilder.sections(
+            from: EventTagIndex.events(from: upcomingEvents, matching: selectedTag),
+            now: now(),
+            calendar: calendar
+        )
+    }
+
+    var availableTags: [String] {
+        EventTagIndex.tags(in: upcomingEvents + events)
     }
 
     var displayedPins: [PinnedEvent] {
@@ -124,6 +136,10 @@ final class CalendarViewModel: ObservableObject {
 
     func selectToday() {
         selectDate(now())
+    }
+
+    func selectTag(_ tag: String?) {
+        selectedTag = EventTagIndex.resolvedSelection(tag, availableTags: availableTags)
     }
 
     func toggleCalendar(_ calendarID: String) {
@@ -223,6 +239,7 @@ final class CalendarViewModel: ObservableObject {
             events = try source.events(in: selectedInterval, calendarIDs: selectedCalendarIDs)
             upcomingEvents = try source.events(in: upcomingInterval, calendarIDs: selectedCalendarIDs)
             loadedInterval = selectedInterval
+            reconcileSelectedTag()
             reconcilePins(with: events + upcomingEvents)
             errorMessage = nil
         } catch {
@@ -238,6 +255,7 @@ final class CalendarViewModel: ObservableObject {
         do {
             events = try source.events(in: interval, calendarIDs: selectedCalendarIDs)
             loadedInterval = interval
+            reconcileSelectedTag()
             reconcilePins(with: events + upcomingEvents)
             errorMessage = nil
         } catch {
@@ -256,5 +274,12 @@ final class CalendarViewModel: ObservableObject {
         } catch {
             errorMessage = "ピン留めの更新を保存できませんでした。"
         }
+    }
+
+    private func reconcileSelectedTag() {
+        selectedTag = EventTagIndex.resolvedSelection(
+            selectedTag,
+            availableTags: availableTags
+        )
     }
 }

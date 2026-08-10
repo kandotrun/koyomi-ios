@@ -8,6 +8,7 @@ struct EventDetailView: View {
     let onTogglePin: () -> Void
 
     private var tint: Color { Color(koyomiHex: event.calendarColorHex) }
+    private var metadata: EventTitleMetadata { event.titleMetadata }
 
     var body: some View {
         NavigationStack {
@@ -21,12 +22,21 @@ struct EventDetailView: View {
                                 .frame(width: 52, height: 52)
                                 .koyomiGlass(tint: tint, cornerRadius: 18)
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(event.calendarName)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                Text(event.title)
+                                if !metadata.containsTag(event.calendarName) {
+                                    Text(event.calendarName)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text(metadata.displayTitle)
                                     .font(.title2.bold())
                                     .fixedSize(horizontal: false, vertical: true)
+                                if !metadata.tags.isEmpty {
+                                    ScrollView(.horizontal) {
+                                        EventTagSummary(tags: metadata.tags, limit: metadata.tags.count)
+                                            .padding(.vertical, 2)
+                                    }
+                                    .scrollIndicators(.hidden)
+                                }
                             }
                         }
 
