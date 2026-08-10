@@ -80,6 +80,7 @@ final class CalendarViewModel: ObservableObject {
     func bootstrap() {
         authorizationStatus = source.authorizationStatus
         pinnedEvents = pinStore.load()
+        WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
         if authorizationStatus == .fullAccess {
             refresh()
         }
