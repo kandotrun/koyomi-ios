@@ -68,6 +68,10 @@ def main() -> None:
     assert export.get("manageAppVersionAndBuildNumber") is True
     assert export.get("uploadSymbols") is True
 
+    workflow = (ROOT / ".github/workflows/ios.yml").read_text(encoding="utf-8")
+    assert '--time "9:41"' in workflow, "simctl must use its accepted screenshot time"
+    assert "STATUS_TIME=" not in workflow, "midnight HH:mm values are rejected by simctl"
+
     print("TestFlight distribution contract: PASS")
 
 
