@@ -38,6 +38,15 @@ def main() -> None:
     )
     assert "archive:\n      config: Release" in project, "Koyomi scheme must archive Release"
 
+    expected_resources = (
+        "- path: Resources/PrivacyInfo.xcprivacy\n"
+        "        buildPhase: resources\n"
+        "        type: file"
+    )
+    assert project.count(expected_resources) == 2, (
+        "privacy manifest must be an explicit resource in app and widget targets"
+    )
+
     app_info = load_plist("Koyomi/Info.plist")
     assert app_info.get("ITSAppUsesNonExemptEncryption") is False, (
         "Koyomi/Info.plist must declare no non-exempt encryption"
@@ -71,6 +80,63 @@ def main() -> None:
     workflow = (ROOT / ".github/workflows/ios.yml").read_text(encoding="utf-8")
     assert '--time "9:41"' in workflow, "simctl must use its accepted screenshot time"
     assert "STATUS_TIME=" not in workflow, "midnight HH:mm values are rejected by simctl"
+    assert workflow.count('".github/workflows/testflight.yml"') == 2
+    assert "workflow-lint:" in workflow
+    assert "rhysd/actionlint@sha256:" in workflow
+    assert "Verify embedded privacy manifests" in workflow
+    assert "KoyomiWidget.appex" in workflow
+    assert '"$WIDGET_PATH/PrivacyInfo.xcprivacy"' in workflow
+    assert workflow.count("cmp -s Resources/PrivacyInfo.xcprivacy") == 2
+
+    deploy_path = ROOT / ".github/workflows/testflight.yml"
+    assert deploy_path.is_file(), "reusable TestFlight workflow is missing"
+    deploy = deploy_path.read_text(encoding="utf-8")
+    for required in (
+        "workflow_call:",
+        "source_ref:",
+        "required: true",
+        "persist-credentials: false",
+        "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+        "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+        "CI_KEYCHAIN_PASSWORD:",
+        "ASC_ISSUER_ID:",
+        "ASC_KEY_ID:",
+        "ASC_PRIVATE_KEY:",
+        "fromJSON(inputs.runner_labels)",
+        "repository: kandotrun/koyomi-ios",
+        "xcodebuild archive",
+        "-exportArchive",
+        "-allowProvisioningUpdates",
+        "-authenticationKeyPath",
+        "ExportOptions.plist",
+        "mktemp -d \"$RUNNER_TEMP/koyomi-signing.XXXXXX\"",
+        "OTHER_CODE_SIGN_FLAGS=\"--keychain $CI_KEYCHAIN_PATH\"",
+        "security delete-keychain \"$CI_KEYCHAIN_PATH\"",
+        "ORIGINAL_DEFAULT_KEYCHAIN",
+        "ORIGINAL_KEYCHAIN_LIST_PATH",
+        "cleanup_status=0",
+        "Remove temporary signing keychain",
+        "command -v xcodegen",
+        "DEVELOPER_DIR=",
+        "BEGIN PRIVATE KEY",
+        "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-",
+        "rm -f \"$API_KEY_PATH\"",
+    ):
+        assert required in deploy, f"TestFlight workflow missing: {required}"
+    for forbidden in (
+        "workflow_dispatch:",
+        "push:",
+        "pull_request:",
+        "default: main",
+        "brew install",
+        "sudo xcode-select",
+        "rm -rf",
+        "LOGIN_KEYCHAIN=",
+        "uses: actions/checkout@v",
+        "uses: actions/upload-artifact@v",
+        'security lock-keychain "$KEYCHAIN_PATH"',
+    ):
+        assert forbidden not in deploy, f"public deploy workflow must not expose {forbidden}"
 
     print("TestFlight distribution contract: PASS")
 

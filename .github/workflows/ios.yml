@@ -14,6 +14,7 @@ on:
       - "Resources/**"
       - "scripts/verify-testflight-config.py"
       - ".github/workflows/ios.yml"
+      - ".github/workflows/testflight.yml"
   pull_request:
     paths:
       - "project.yml"
@@ -25,6 +26,7 @@ on:
       - "Resources/**"
       - "scripts/verify-testflight-config.py"
       - ".github/workflows/ios.yml"
+      - ".github/workflows/testflight.yml"
 
 permissions:
   contents: read
@@ -34,7 +36,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  workflow-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate GitHub Actions workflows
+        run: |
+          docker run --rm \
+            -v "$PWD:/repo" \
+            -w /repo \
+            rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            -color \
+            .github/workflows/ios.yml \
+            .github/workflows/testflight.yml
+
   test-and-build:
+    needs: workflow-lint
     runs-on: macos-26
     timeout-minutes: 25
     steps:
@@ -58,6 +76,12 @@ jobs:
             -derivedDataPath DerivedData-Build \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify
+      - name: Verify embedded privacy manifests
+        run: |
+          APP_PATH="DerivedData-Build/Build/Products/Debug-iphonesimulator/Koyomi.app"
+          WIDGET_PATH="$APP_PATH/PlugIns/KoyomiWidget.appex"
+          cmp -s Resources/PrivacyInfo.xcprivacy "$APP_PATH/PrivacyInfo.xcprivacy"
+          cmp -s Resources/PrivacyInfo.xcprivacy "$WIDGET_PATH/PrivacyInfo.xcprivacy"
       - name: Select simulator
         id: simulator
         run: |
