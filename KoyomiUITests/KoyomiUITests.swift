@@ -57,7 +57,8 @@ final class KoyomiUITests: XCTestCase {
         upcomingButton.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["upcoming-list"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.descendants(matching: .any)["upcoming-event-demo-travel"].waitForExistence(timeout: 2))
+        let travelEvent = app.descendants(matching: .any)["upcoming-event-demo-travel"]
+        XCTAssertTrue(scrollToExistence(travelEvent, in: app))
         XCTAssertTrue(app.staticTexts["新幹線の予約"].exists)
         XCTAssertEqual(
             app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "令和")).count,
@@ -65,6 +66,15 @@ final class KoyomiUITests: XCTestCase {
             "future date headings should be short and scan-friendly"
         )
         attachScreenshot(of: app, name: "Upcoming events")
+    }
+
+    private func scrollToExistence(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+        if element.exists { return true }
+        for _ in 0..<6 {
+            app.swipeUp()
+            if element.waitForExistence(timeout: 0.5) { return true }
+        }
+        return false
     }
 
     private func attachScreenshot(of app: XCUIApplication, name: String) {
