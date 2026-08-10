@@ -100,7 +100,7 @@ struct KoyomiWidgetView: View {
                         .font(.caption2.weight(.semibold))
                         .lineLimit(1)
                 }
-                Text(pin.title)
+                Text(pin.titleMetadata.displayTitle)
                     .font(.headline)
                     .lineLimit(2)
                 Spacer(minLength: 2)
@@ -129,7 +129,7 @@ struct KoyomiWidgetView: View {
                                 .fill(Color(koyomiHex: pin.calendarColorHex))
                                 .frame(width: 4, height: 31)
                                 .widgetAccentable()
-                            Text(pin.title)
+                            Text(pin.titleMetadata.displayTitle)
                                 .font(.subheadline.weight(.semibold))
                                 .lineLimit(1)
                             Spacer(minLength: 6)
@@ -145,7 +145,7 @@ struct KoyomiWidgetView: View {
     private var accessoryContent: some View {
         if let pin = entry.pins.first {
             VStack(alignment: .leading, spacing: 2) {
-                Text(pin.title)
+                Text(pin.titleMetadata.displayTitle)
                     .font(.headline)
                     .lineLimit(1)
                 countdown(for: pin, large: false)

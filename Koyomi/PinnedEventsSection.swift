@@ -66,18 +66,22 @@ private struct PinnedCountdownCard: View {
     let onRemove: () -> Void
 
     private var tint: Color { Color(koyomiHex: pin.calendarColorHex) }
+    private var metadata: EventTitleMetadata { pin.titleMetadata }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 13) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(pin.calendarName)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.primary.opacity(0.68))
-                    Text(pin.title)
+                    if !metadata.containsTag(pin.calendarName) {
+                        Text(pin.calendarName)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.primary.opacity(0.68))
+                    }
+                    Text(metadata.displayTitle)
                         .font(.title3.bold())
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
+                    EventTagSummary(tags: metadata.tags)
                 }
                 Spacer(minLength: 8)
                 Button(action: onRemove) {
@@ -85,7 +89,7 @@ private struct PinnedCountdownCard: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(width: 32, height: 32)
                 }
-                .accessibilityLabel("\(pin.title)のピン留めを解除")
+                .accessibilityLabel("\(metadata.displayTitle)のピン留めを解除")
             }
 
             TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -105,14 +109,15 @@ private struct PinnedCountdownCard: View {
             HStack(spacing: 8) {
                 Image(systemName: pin.isAllDay ? "sun.max" : "clock")
                 Text(dateText)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .font(.caption)
             .foregroundStyle(.primary.opacity(0.68))
         }
         .padding(18)
         .frame(width: 330, alignment: .topLeading)
-        .frame(minHeight: 174, alignment: .topLeading)
+        .frame(minHeight: metadata.tags.isEmpty ? 174 : 190, alignment: .topLeading)
         .contentShape(.rect)
         .onTapGesture(perform: onOpen)
         .koyomiGlass(tint: tint, cornerRadius: 28, interactive: true)

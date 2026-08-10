@@ -19,9 +19,24 @@
 - Small / Mediumホーム画面ウィジェット
 - accessory rectangularロック画面ウィジェット
 - ピンした予定をウィジェットから開くディープリンク
+- 予定名末尾の任意の`#タグ`を本文から分離し、色付きチップで表示
+- `すべて / #重要 / #タスク / #仕事 / #メモ / 任意のプロジェクトタグ`で日別・予定一覧を絞り込み
+- Widgetではタグを除いた読みやすいタイトルを表示
 - iOS 26のLiquid Glass。ガラスはピン領域と操作部に絞り、Reduce Transparency時は不透明度の高い代替表示
 
 Googleカレンダーも、iOSの「カレンダー」に同期済みであればEventKit経由で表示されます。
+
+## タグとHermes Agent
+
+人が読むタイトルを先に書き、空白を挟んでタグを末尾に置きます。
+
+```text
+ClinicalAI 定例 #仕事 #ClinicalAI
+請求書を送る #タスク #重要 #TeslaEC
+あとで調べる：音声UI #メモ #AI
+```
+
+アプリ内にAI SDKやGoogle認証情報は入れません。Hermes Agentはユーザーの明示指示と確認に基づいてGoogle Calendar側を操作し、KoyomiはiPhoneのEventKit同期結果を表示します。詳しい記法と安全境界は[`docs/calendar-title-tags.md`](docs/calendar-title-tags.md)を参照してください。
 
 ## データとプライバシー
 

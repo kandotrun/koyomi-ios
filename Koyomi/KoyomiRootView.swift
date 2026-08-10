@@ -115,6 +115,9 @@ struct KoyomiRootView: View {
             VStack(alignment: .leading, spacing: 24) {
                 PinnedEventsSection(model: model)
                 displayModePicker
+                if !model.availableTags.isEmpty {
+                    EventTagFilterBar(model: model)
+                }
 
                 switch displayMode {
                 case .day:

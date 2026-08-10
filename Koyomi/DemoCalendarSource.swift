@@ -61,7 +61,7 @@ final class DemoCalendarSource: CalendarEventSource {
 
         let project = make(
             "project",
-            title: "プロジェクト発表",
+            title: "プロジェクト発表 #仕事 #重要",
             start: date(tomorrow, hour: 10),
             end: date(tomorrow, hour: 11, minute: 30),
             calendar: work,
@@ -69,7 +69,7 @@ final class DemoCalendarSource: CalendarEventSource {
         )
         let allDay = make(
             "release-week",
-            title: "リリース週",
+            title: "リリース週 #仕事",
             start: today,
             end: tomorrow,
             isAllDay: true,
@@ -77,7 +77,7 @@ final class DemoCalendarSource: CalendarEventSource {
         )
         let focus = make(
             "focus",
-            title: "集中作業",
+            title: "集中作業 #仕事 #タスク",
             start: date(today, hour: 10),
             end: date(today, hour: 12),
             calendar: personal,
@@ -85,7 +85,7 @@ final class DemoCalendarSource: CalendarEventSource {
         )
         let dentist = make(
             "dentist",
-            title: "歯科検診",
+            title: "歯科検診 #個人",
             start: date(today, hour: 14),
             end: date(today, hour: 15),
             calendar: personal,
@@ -93,7 +93,7 @@ final class DemoCalendarSource: CalendarEventSource {
         )
         let travel = make(
             "travel",
-            title: "新幹線の予約",
+            title: "新幹線の予約 #タスク #旅行",
             start: date(nextTrip, hour: 9),
             end: date(nextTrip, hour: 9, minute: 30),
             calendar: work
