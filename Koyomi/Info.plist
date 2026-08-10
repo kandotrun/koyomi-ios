@@ -31,6 +31,8 @@
     </array>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>大切な予定を表示し、ピン留めするためにカレンダーを読み取ります。予定は端末の外へ送信しません。</string>
     <key>UIApplicationSceneManifest</key>

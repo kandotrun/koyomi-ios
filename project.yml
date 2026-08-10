@@ -15,9 +15,9 @@ settings:
     TARGETED_DEVICE_FAMILY: "1"
     SUPPORTS_MACCATALYST: false
     CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: UGNVGWZMAU
     CURRENT_PROJECT_VERSION: "1"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "1.0.0"
 
 configs:
   Debug: debug
@@ -32,6 +32,7 @@ targets:
       - path: Shared
     resources:
       - path: Koyomi/Assets.xcassets
+      - path: Resources/PrivacyInfo.xcprivacy
     dependencies:
       - target: KoyomiWidget
         embed: true
@@ -41,6 +42,7 @@ targets:
         CFBundleDisplayName: こよみ
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        ITSAppUsesNonExemptEncryption: false
         NSCalendarsFullAccessUsageDescription: 大切な予定を表示し、ピン留めするためにカレンダーを読み取ります。予定は端末の外へ送信しません。
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
@@ -68,6 +70,8 @@ targets:
     sources:
       - path: KoyomiWidget
       - path: Shared
+    resources:
+      - path: Resources/PrivacyInfo.xcprivacy
     info:
       path: KoyomiWidget/Info.plist
       properties:
