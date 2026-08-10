@@ -81,8 +81,10 @@ jobs:
           fi
           echo "DEVELOPER_DIR=$XCODE_DEVELOPER_DIR" >> "$GITHUB_ENV"
           export DEVELOPER_DIR="$XCODE_DEVELOPER_DIR"
-          xcodebuild -version
-          xcodebuild -version | grep -Eq '^Xcode 26([.]|$)'
+          XCODE_VERSION_OUTPUT=$(xcodebuild -version)
+          printf '%s\n' "$XCODE_VERSION_OUTPUT"
+          XCODE_VERSION_LINE="${XCODE_VERSION_OUTPUT%%$'\n'*}"
+          [[ "$XCODE_VERSION_LINE" =~ ^Xcode[[:space:]]26([.]|$) ]]
 
       - name: Verify XcodeGen
         shell: bash
