@@ -45,7 +45,7 @@ Hermes may create, reschedule, or organize the connected Google Calendar when th
 3. Preserve existing unknown tags when editing.
 4. Use an explicit timezone for every timed event.
 5. Show the proposed mutation and obtain user approval before creating, updating, moving, or deleting calendar events.
-6. Avoid printing raw calendar titles or descriptions in operational logs.
+6. Never print raw calendar titles, descriptions, locations, attendees, or URLs in operational logs.
 
 The iOS app remains offline-only and read-only. Hermes is a separate operator that uses the calendar provider's API; there is no Hermes token, Google credential, or agent endpoint inside the app.
 
