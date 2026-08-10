@@ -6,6 +6,9 @@ import WidgetKit
 final class CalendarViewModel: ObservableObject {
     @Published private(set) var authorizationStatus: CalendarAccessStatus
     @Published private(set) var events: [CalendarEvent] = []
+    @Published private(set) var upcomingEvents: [CalendarEvent] = []
+    @Published private(set) var calendars: [CalendarDescriptor] = []
+    @Published private(set) var selectedCalendarIDs: Set<String> = []
     @Published private(set) var pinnedEvents: [PinnedEvent]
     @Published private(set) var isLoading = false
     @Published var selectedDate: Date
@@ -14,6 +17,7 @@ final class CalendarViewModel: ObservableObject {
 
     private let source: CalendarEventSource
     private let pinStore: PinnedEventsStore
+    private let calendarSelectionStore: CalendarSelectionStore
     private let calendar: Calendar
     private let now: () -> Date
     private var loadedInterval: DateInterval?
@@ -21,11 +25,13 @@ final class CalendarViewModel: ObservableObject {
     init(
         source: CalendarEventSource,
         pinStore: PinnedEventsStore,
+        calendarSelectionStore: CalendarSelectionStore,
         calendar: Calendar = .current,
         now: @escaping () -> Date = Date.init
     ) {
         self.source = source
         self.pinStore = pinStore
+        self.calendarSelectionStore = calendarSelectionStore
         self.calendar = calendar
         self.now = now
         authorizationStatus = source.authorizationStatus
@@ -35,6 +41,10 @@ final class CalendarViewModel: ObservableObject {
 
     var agendaEvents: [CalendarEvent] {
         AgendaBuilder.events(on: selectedDate, from: events, calendar: calendar)
+    }
+
+    var upcomingSections: [UpcomingAgendaSection] {
+        UpcomingAgendaBuilder.sections(from: upcomingEvents, now: now(), calendar: calendar)
     }
 
     var displayedPins: [PinnedEvent] {
@@ -59,6 +69,14 @@ final class CalendarViewModel: ObservableObject {
         )
     }
 
+    var isCalendarFilterActive: Bool {
+        !calendars.isEmpty && selectedCalendarIDs.count != calendars.count
+    }
+
+    func isCalendarSelected(_ calendarID: String) -> Bool {
+        selectedCalendarIDs.contains(calendarID)
+    }
+
     func bootstrap() {
         authorizationStatus = source.authorizationStatus
         pinnedEvents = pinStore.load()
@@ -74,7 +92,8 @@ final class CalendarViewModel: ObservableObject {
             _ = try await source.requestFullAccess()
             authorizationStatus = source.authorizationStatus
             if authorizationStatus == .fullAccess {
-                loadEvents()
+                refreshAvailableCalendars()
+                reloadAllEventWindows()
             }
         } catch {
             errorMessage = "カレンダーへのアクセスを確認できませんでした。"
@@ -87,7 +106,8 @@ final class CalendarViewModel: ObservableObject {
         guard authorizationStatus == .fullAccess else { return }
         isLoading = true
         defer { isLoading = false }
-        loadEvents()
+        refreshAvailableCalendars()
+        reloadAllEventWindows()
     }
 
     func selectDate(_ date: Date) {
@@ -97,12 +117,29 @@ final class CalendarViewModel: ObservableObject {
             CalendarLoadWindow.contains(day: selectedDate, in: $0, calendar: calendar)
         } ?? false
         if !isLoaded {
-            refresh()
+            loadSelectedEventWindow()
         }
     }
 
     func selectToday() {
         selectDate(now())
+    }
+
+    func toggleCalendar(_ calendarID: String) {
+        guard calendars.contains(where: { $0.id == calendarID }) else { return }
+        var updated = selectedCalendarIDs
+        if !updated.insert(calendarID).inserted {
+            updated.remove(calendarID)
+        }
+        saveCalendarSelection(updated)
+    }
+
+    func selectAllCalendars() {
+        saveCalendarSelection(Set(calendars.map(\.id)))
+    }
+
+    func deselectAllCalendars() {
+        saveCalendarSelection([])
     }
 
     func isPinned(_ event: CalendarEvent) -> Bool {
@@ -128,7 +165,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func event(for pin: PinnedEvent) -> CalendarEvent {
-        if let exact = events.first(where: { $0.id == pin.id }) {
+        if let exact = (events + upcomingEvents).first(where: { $0.id == pin.id }) {
             return exact
         }
         return CalendarEvent(
@@ -148,30 +185,67 @@ final class CalendarViewModel: ObservableObject {
     func open(_ url: URL) {
         guard url.scheme == "koyomi", url.host == "event" else { return }
         let id = url.pathComponents.dropFirst().joined(separator: "/").removingPercentEncoding ?? ""
-        if let event = events.first(where: { $0.id == id }) {
+        if let event = (events + upcomingEvents).first(where: { $0.id == id }) {
             selectedEvent = event
         } else if let pin = pinnedEvents.first(where: { $0.id == id }) {
             selectedEvent = event(for: pin)
         }
     }
 
-    private func loadEvents() {
-        guard let interval = CalendarLoadWindow.interval(around: selectedDate, calendar: calendar) else {
-            return
+    private func refreshAvailableCalendars() {
+        calendars = source.availableCalendars
+        selectedCalendarIDs = calendarSelectionStore.loadSelection(availableCalendars: calendars)
+    }
+
+    private func saveCalendarSelection(_ selection: Set<String>) {
+        do {
+            try calendarSelectionStore.saveSelection(selection)
+            selectedCalendarIDs = selection
+            reloadAllEventWindows()
+        } catch {
+            errorMessage = "カレンダーの表示設定を保存できませんでした。"
         }
+    }
+
+    private func reloadAllEventWindows() {
+        guard
+            let selectedInterval = CalendarLoadWindow.interval(around: selectedDate, calendar: calendar),
+            let upcomingInterval = CalendarLoadWindow.interval(
+                around: now(),
+                calendar: calendar,
+                monthsBefore: 0,
+                monthsAfter: 18
+            )
+        else { return }
 
         do {
-            events = try source.events(in: interval)
-            loadedInterval = interval
-            reconcilePins()
+            events = try source.events(in: selectedInterval, calendarIDs: selectedCalendarIDs)
+            upcomingEvents = try source.events(in: upcomingInterval, calendarIDs: selectedCalendarIDs)
+            loadedInterval = selectedInterval
+            reconcilePins(with: events + upcomingEvents)
             errorMessage = nil
         } catch {
             errorMessage = "予定を読み込めませんでした。"
         }
     }
 
-    private func reconcilePins() {
-        let reconciled = PinnedEventReconciler.reconcile(pins: pinnedEvents, with: events)
+    private func loadSelectedEventWindow() {
+        guard let interval = CalendarLoadWindow.interval(around: selectedDate, calendar: calendar) else {
+            return
+        }
+
+        do {
+            events = try source.events(in: interval, calendarIDs: selectedCalendarIDs)
+            loadedInterval = interval
+            reconcilePins(with: events + upcomingEvents)
+            errorMessage = nil
+        } catch {
+            errorMessage = "予定を読み込めませんでした。"
+        }
+    }
+
+    private func reconcilePins(with candidates: [CalendarEvent]) {
+        let reconciled = PinnedEventReconciler.reconcile(pins: pinnedEvents, with: candidates)
 
         guard reconciled != pinnedEvents else { return }
         do {

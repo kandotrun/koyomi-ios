@@ -27,17 +27,44 @@ final class EventKitCalendarSource: CalendarEventSource {
         }
     }
 
+    var availableCalendars: [CalendarDescriptor] {
+        guard authorizationStatus == .fullAccess else { return [] }
+        return eventStore.calendars(for: .event)
+            .map { calendar in
+                CalendarDescriptor(
+                    id: calendar.calendarIdentifier,
+                    title: calendar.title,
+                    sourceName: calendar.source.title,
+                    colorHex: Self.hex(calendar.cgColor)
+                )
+            }
+            .sorted { lhs, rhs in
+                if lhs.sourceName != rhs.sourceName {
+                    return lhs.sourceName.localizedStandardCompare(rhs.sourceName) == .orderedAscending
+                }
+                if lhs.title != rhs.title {
+                    return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+                }
+                return lhs.id < rhs.id
+            }
+    }
+
     func requestFullAccess() async throws -> Bool {
         try await eventStore.requestFullAccessToEvents()
     }
 
-    func events(in interval: DateInterval) throws -> [CalendarEvent] {
-        guard authorizationStatus == .fullAccess else { return [] }
+    func events(in interval: DateInterval, calendarIDs: Set<String>) throws -> [CalendarEvent] {
+        guard authorizationStatus == .fullAccess, !calendarIDs.isEmpty else { return [] }
+
+        let selectedCalendars = eventStore.calendars(for: .event).filter {
+            calendarIDs.contains($0.calendarIdentifier)
+        }
+        guard !selectedCalendars.isEmpty else { return [] }
 
         let predicate = eventStore.predicateForEvents(
             withStart: interval.start,
             end: interval.end,
-            calendars: nil
+            calendars: selectedCalendars
         )
 
         return eventStore.events(matching: predicate).map { event in
@@ -59,6 +86,7 @@ final class EventKitCalendarSource: CalendarEventSource {
                 startDate: event.startDate,
                 endDate: max(event.endDate, event.startDate),
                 isAllDay: event.isAllDay,
+                calendarID: event.calendar.calendarIdentifier,
                 calendarName: event.calendar.title,
                 calendarColorHex: Self.hex(event.calendar.cgColor),
                 location: rawLocation?.isEmpty == false ? rawLocation : nil

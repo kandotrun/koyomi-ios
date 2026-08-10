@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 TEAM_ID = "UGNVGWZMAU"
 APP_ID = "run.kan.koyomi"
 WIDGET_ID = "run.kan.koyomi.widget"
-APP_GROUP = "group.run.kan.koyomi"
+KEYCHAIN_ACCESS_GROUP = "$(AppIdentifierPrefix)run.kan.koyomi.shared"
+SIGNED_KEYCHAIN_ACCESS_GROUP = f"{TEAM_ID}.run.kan.koyomi.shared"
 
 
 def load_plist(relative_path: str) -> dict:
@@ -55,9 +56,18 @@ def main() -> None:
 
     app_entitlements = load_plist("Koyomi/Koyomi.entitlements")
     widget_entitlements = load_plist("KoyomiWidget/KoyomiWidget.entitlements")
-    expected_groups = [APP_GROUP]
-    assert app_entitlements.get("com.apple.security.application-groups") == expected_groups
-    assert widget_entitlements.get("com.apple.security.application-groups") == expected_groups
+    expected_groups = [KEYCHAIN_ACCESS_GROUP]
+    assert app_entitlements.get("keychain-access-groups") == expected_groups
+    assert widget_entitlements.get("keychain-access-groups") == expected_groups
+    assert "com.apple.security.application-groups" not in app_entitlements
+    assert "com.apple.security.application-groups" not in widget_entitlements
+    assert project.count(KEYCHAIN_ACCESS_GROUP) == 2
+
+    app_dependencies = (ROOT / "Koyomi/AppDependencies.swift").read_text(encoding="utf-8")
+    widget_source = (ROOT / "KoyomiWidget/KoyomiWidget.swift").read_text(encoding="utf-8")
+    assert "storage: KeychainPinnedEventsDataStorage()" in app_dependencies
+    assert "migrationStorage: UserDefaultsPinnedEventsDataStorage(defaults: .standard)" in app_dependencies
+    assert "PinnedEventsStore(storage: KeychainPinnedEventsDataStorage())" in widget_source
 
     privacy = load_plist("Resources/PrivacyInfo.xcprivacy")
     assert privacy.get("NSPrivacyTracking") is False
@@ -122,9 +132,18 @@ def main() -> None:
         "XCODE_VERSION_OUTPUT=$(xcodebuild -version)",
         "BEGIN PRIVATE KEY",
         "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-",
+        "Print :keychain-access-groups:0",
+        "Print :keychain-access-groups:1",
+        "Signed archive Keychain sharing: PASS",
         "rm -f \"$API_KEY_PATH\"",
     ):
         assert required in deploy, f"TestFlight workflow missing: {required}"
+    assert deploy.count(SIGNED_KEYCHAIN_ACCESS_GROUP) >= 2, (
+        "TestFlight archive must verify the shared Keychain group for app and widget"
+    )
+    assert "group.run.kan.koyomi" not in deploy, (
+        "TestFlight workflow must not require the retired App Group"
+    )
     for forbidden in (
         "workflow_dispatch:",
         "push:",

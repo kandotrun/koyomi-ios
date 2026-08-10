@@ -39,7 +39,8 @@ public struct PinnedEvent: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
-public enum KoyomiAppGroup {
-    public static let identifier = "group.run.kan.koyomi"
+public enum KoyomiSharedStorage {
+    public static let keychainAccessGroup = "UGNVGWZMAU.run.kan.koyomi.shared"
+    public static let keychainService = "run.kan.koyomi.shared-storage"
     public static let pinnedEventsKey = "pinned-events-v1"
 }

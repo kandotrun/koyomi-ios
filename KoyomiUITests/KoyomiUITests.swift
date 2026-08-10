@@ -33,6 +33,47 @@ final class KoyomiUITests: XCTestCase {
         XCTAssertTrue(app.buttons["歯科検診のピン留めを解除"].waitForExistence(timeout: 5))
     }
 
+    func testCalendarFilterCanHideOneDeviceCalendar() {
+        let app = launchDemo()
+        let filterButton = app.buttons["表示するカレンダーを選ぶ"]
+        XCTAssertTrue(filterButton.waitForExistence(timeout: 5))
+
+        filterButton.tap()
+        let personalCalendar = app.buttons["calendar-toggle-demo-personal"]
+        XCTAssertTrue(personalCalendar.waitForExistence(timeout: 2))
+        attachScreenshot(of: app, name: "Calendar filter")
+        personalCalendar.tap()
+        app.buttons["完了"].tap()
+
+        XCTAssertTrue(app.staticTexts["歯科検診"].waitForNonExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["集中作業"].waitForNonExistence(timeout: 2))
+    }
+
+    func testUpcomingViewShowsFutureEventsGroupedByDate() {
+        let app = launchDemo()
+        let upcomingButton = app.segmentedControls.buttons["予定一覧"]
+        XCTAssertTrue(upcomingButton.waitForExistence(timeout: 5))
+
+        upcomingButton.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["upcoming-list"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["upcoming-event-demo-travel"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["新幹線の予約"].exists)
+        XCTAssertEqual(
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "令和")).count,
+            0,
+            "future date headings should be short and scan-friendly"
+        )
+        attachScreenshot(of: app, name: "Upcoming events")
+    }
+
+    private func attachScreenshot(of app: XCUIApplication, name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     private func launchDemo() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing"]

@@ -215,8 +215,24 @@ jobs:
           codesign --verify --deep --strict "$APP_PATH"
           codesign -d --entitlements :- "$APP_PATH" > "$RUNNER_TEMP/koyomi-app-entitlements.plist" 2>/dev/null
           codesign -d --entitlements :- "$WIDGET_PATH" > "$RUNNER_TEMP/koyomi-widget-entitlements.plist" 2>/dev/null
-          [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' "$RUNNER_TEMP/koyomi-app-entitlements.plist")" == "group.run.kan.koyomi" ]]
-          [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups:0' "$RUNNER_TEMP/koyomi-widget-entitlements.plist")" == "group.run.kan.koyomi" ]]
+          [[ "$(/usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:0' "$RUNNER_TEMP/koyomi-app-entitlements.plist")" == "UGNVGWZMAU.run.kan.koyomi.shared" ]]
+          [[ "$(/usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:0' "$RUNNER_TEMP/koyomi-widget-entitlements.plist")" == "UGNVGWZMAU.run.kan.koyomi.shared" ]]
+          if /usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:1' "$RUNNER_TEMP/koyomi-app-entitlements.plist" >/dev/null 2>&1; then
+            echo "Signed app contains unexpected extra Keychain access groups" >&2
+            exit 1
+          fi
+          if /usr/libexec/PlistBuddy -c 'Print :keychain-access-groups:1' "$RUNNER_TEMP/koyomi-widget-entitlements.plist" >/dev/null 2>&1; then
+            echo "Signed widget contains unexpected extra Keychain access groups" >&2
+            exit 1
+          fi
+          if /usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups' "$RUNNER_TEMP/koyomi-app-entitlements.plist" >/dev/null 2>&1; then
+            echo "Signed app unexpectedly contains App Groups" >&2
+            exit 1
+          fi
+          if /usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups' "$RUNNER_TEMP/koyomi-widget-entitlements.plist" >/dev/null 2>&1; then
+            echo "Signed widget unexpectedly contains App Groups" >&2
+            exit 1
+          fi
 
       - name: Upload archive to App Store Connect
         shell: bash
@@ -242,6 +258,7 @@ jobs:
             echo "- Source: \`$(git rev-parse HEAD)\`"
             echo "- Version: \`1.0.0 (${{ steps.build.outputs.number }})\`"
             echo '- Signed archive validation: PASS'
+            echo '- Signed archive Keychain sharing: PASS'
             echo '- App Store Connect upload: PASS'
           } >> "$GITHUB_STEP_SUMMARY"
 

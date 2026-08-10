@@ -61,6 +61,32 @@ final class PinnedEventsStoreTests: XCTestCase {
         XCTAssertEqual(store.load(), [])
     }
 
+    func testMigratesLegacyStorageWhenPrimaryIsEmpty() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let event = makeEvent(id: "legacy", start: Date(timeIntervalSince1970: 100))
+        try PinnedEventsStore(storage: legacy).save([event])
+
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+
+        XCTAssertEqual(migratingStore.load(), [event])
+        XCTAssertEqual(PinnedEventsStore(storage: primary).load(), [event])
+    }
+
+    func testPrimaryStorageWinsOverLegacyStorage() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let primaryEvent = makeEvent(id: "primary", start: Date(timeIntervalSince1970: 100))
+        let legacyEvent = makeEvent(id: "legacy", start: Date(timeIntervalSince1970: 200))
+        try PinnedEventsStore(storage: primary).save([primaryEvent])
+        try PinnedEventsStore(storage: legacy).save([legacyEvent])
+
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+
+        XCTAssertEqual(migratingStore.load(), [primaryEvent])
+        XCTAssertEqual(PinnedEventsStore(storage: primary).load(), [primaryEvent])
+    }
+
     private func makeEvent(id: String, start: Date) -> PinnedEvent {
         PinnedEvent(
             id: id,
@@ -74,5 +100,22 @@ final class PinnedEventsStoreTests: XCTestCase {
             calendarColorHex: "19A974",
             location: "広島"
         )
+    }
+}
+
+private final class InMemoryPinnedEventsDataStorage: PinnedEventsDataStorage, @unchecked Sendable {
+    private let lock = NSLock()
+    private var data: Data?
+
+    func read() throws -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return data
+    }
+
+    func write(_ data: Data) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        self.data = data
     }
 }

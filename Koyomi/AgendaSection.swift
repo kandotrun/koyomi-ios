@@ -11,7 +11,7 @@ struct AgendaSection: View {
                 Spacer()
                 Text(model.agendaEvents.isEmpty ? "予定なし" : "\(model.agendaEvents.count)件")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary.opacity(0.7))
             }
             .padding(.horizontal, 20)
 
@@ -29,8 +29,14 @@ struct AgendaSection: View {
                         AgendaEventRow(
                             event: event,
                             isPinned: model.isPinned(event),
-                            onOpen: { model.selectedEvent = event },
-                            onTogglePin: { model.togglePin(event) }
+                            onOpen: {
+                                KoyomiHaptics.perform(.openEvent)
+                                model.selectedEvent = event
+                            },
+                            onTogglePin: {
+                                KoyomiHaptics.perform(.togglePin)
+                                model.togglePin(event)
+                            }
                         )
                     }
                 }
@@ -43,7 +49,7 @@ struct AgendaSection: View {
     }
 }
 
-private struct AgendaEventRow: View {
+struct AgendaEventRow: View {
     let event: CalendarEvent
     let isPinned: Bool
     let onOpen: () -> Void
@@ -63,7 +69,7 @@ private struct AgendaEventRow: View {
                     Text(timeText)
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.7))
                         .frame(width: 58, alignment: .leading)
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -80,7 +86,7 @@ private struct AgendaEventRow: View {
                             }
                         }
                         .font(.caption)
-                        .foregroundStyle(.primary.opacity(0.68))
+                        .foregroundStyle(.primary.opacity(0.74))
                     }
                     Spacer(minLength: 4)
                 }
@@ -89,10 +95,10 @@ private struct AgendaEventRow: View {
             .buttonStyle(.plain)
 
             Button(action: onTogglePin) {
-                Image(systemName: isPinned ? "pin.fill" : "pin")
+                Image(systemName: isPinned ? "pin.slash.fill" : "pin")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(isPinned ? tint : Color.primary.opacity(0.58))
-                    .frame(width: 38, height: 38)
+                    .foregroundStyle(isPinned ? tint : Color.primary.opacity(0.74))
+                    .frame(width: 44, height: 44)
             }
             .accessibilityLabel(isPinned ? "\(event.title)のピン留めを解除" : "\(event.title)をピン留め")
         }

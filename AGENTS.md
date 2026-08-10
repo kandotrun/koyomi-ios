@@ -12,7 +12,7 @@ EventKitの予定を読み、選んだ予定をピン留めし、アプリとWid
 2. カウントダウン・ピン選択・保存・日付境界は `KoyomiCore` の純粋ロジックとしてテストする。
 3. EventKitは `@MainActor` のアダプタに閉じ込め、テスト/Preview/UIテストではサンプルデータ源に差し替える。
 4. Calendarの内容は端末外へ送らない。ログにもタイトル、場所、参加者、URLを出さない。
-5. App Groupに保存するのはピン留めした予定の表示スナップショットだけ。
+5. 共有Keychainに保存するのはピン留めした予定の表示スナップショットだけ。
 6. Liquid Glassは標準ナビゲーション・ツールバーを優先し、カスタムglassEffectを乱用しない。
 7. VoiceOver、文字サイズ、Reduce Motion、Reduce Transparency、ダークモードを壊さない。
 8. iOS deployment targetは26.0。Swift 6の警告を放置しない。

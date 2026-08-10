@@ -11,7 +11,8 @@ struct KoyomiApp: App {
         _model = StateObject(
             wrappedValue: CalendarViewModel(
                 source: dependencies.source,
-                pinStore: dependencies.pinStore
+                pinStore: dependencies.pinStore,
+                calendarSelectionStore: dependencies.calendarSelectionStore
             )
         )
     }

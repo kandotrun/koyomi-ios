@@ -38,6 +38,7 @@ struct CalendarPermissionView: View {
         switch status {
         case .notDetermined:
             Button {
+                KoyomiHaptics.perform(.requestAccess)
                 Task { await model.requestCalendarAccess() }
             } label: {
                 Label("カレンダーを表示", systemImage: "calendar.badge.checkmark")
@@ -47,6 +48,7 @@ struct CalendarPermissionView: View {
             .disabled(model.isLoading)
         case .denied, .writeOnly:
             Button {
+                KoyomiHaptics.perform(.requestAccess)
                 guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
                 UIApplication.shared.open(url)
             } label: {
