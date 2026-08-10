@@ -11,27 +11,59 @@ public struct WidgetTimelineState: Equatable, Sendable {
 }
 
 public enum WidgetTimelinePlanner {
+    public static let defaultMaximumEntryCount = 64
+
     public static func states(
         from allPins: [PinnedEvent],
         at now: Date = .now,
         limit: Int,
-        transitionOffset: TimeInterval = 2
+        transitionOffset: TimeInterval = 2,
+        maximumEntryCount: Int = defaultMaximumEntryCount
     ) -> [WidgetTimelineState] {
-        let visible = WidgetPinSelector.activePins(from: allPins, at: now, limit: limit)
-        let transitions = Set(
-            visible
-                .flatMap { [$0.startDate, $0.endDate] }
-                .filter { $0 > now }
-        ).sorted()
-
-        let current = WidgetTimelineState(date: now, pins: visible)
-        let future = transitions.map { transition -> WidgetTimelineState in
-            let date = transition.addingTimeInterval(transitionOffset)
-            return WidgetTimelineState(
-                date: date,
-                pins: WidgetPinSelector.activePins(from: allPins, at: date, limit: limit)
-            )
+        guard limit > 0 else {
+            return [WidgetTimelineState(date: now, pins: [])]
         }
-        return [current] + future
+
+        let visible = WidgetPinSelector.activePins(from: allPins, at: now, limit: limit)
+        var states = [WidgetTimelineState(date: now, pins: visible)]
+        let safeTransitionOffset = normalizedTransitionOffset(transitionOffset)
+        let safeMaximumEntryCount = max(maximumEntryCount, 1)
+        var pendingTransitions = Set(
+            allPins
+                .filter { $0.endDate > now && $0.startDate > now }
+                .map(\.startDate)
+        )
+
+        func addVisibleBoundaries(_ pins: [PinnedEvent], after date: Date) {
+            for pin in pins {
+                if pin.startDate > date {
+                    pendingTransitions.insert(pin.startDate)
+                }
+                if pin.endDate > date {
+                    pendingTransitions.insert(pin.endDate)
+                }
+            }
+        }
+
+        addVisibleBoundaries(visible, after: now)
+
+        while states.count < safeMaximumEntryCount,
+              let transition = pendingTransitions.min() {
+            pendingTransitions.remove(transition)
+            let date = transition.addingTimeInterval(safeTransitionOffset)
+            guard date > states[states.count - 1].date else { continue }
+
+            let pins = WidgetPinSelector.activePins(from: allPins, at: date, limit: limit)
+            states.append(WidgetTimelineState(date: date, pins: pins))
+
+            pendingTransitions = Set(pendingTransitions.filter { $0 > date })
+            addVisibleBoundaries(pins, after: date)
+        }
+
+        return states
+    }
+
+    static func normalizedTransitionOffset(_ transitionOffset: TimeInterval) -> TimeInterval {
+        max(transitionOffset, 0)
     }
 }

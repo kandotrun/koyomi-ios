@@ -6,29 +6,69 @@ private let widgetKind = "KoyomiPinnedCountdown"
 struct KoyomiWidgetEntry: TimelineEntry {
     let date: Date
     let pins: [PinnedEvent]
+    let totalActivePinCount: Int
 }
 
 struct KoyomiWidgetProvider: TimelineProvider {
     private let store = PinnedEventsStore(storage: KeychainPinnedEventsDataStorage())
 
     func placeholder(in context: Context) -> KoyomiWidgetEntry {
-        KoyomiWidgetEntry(date: .now, pins: [Self.placeholderPin])
+        KoyomiWidgetEntry(date: .now, pins: [Self.placeholderPin], totalActivePinCount: 1)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (KoyomiWidgetEntry) -> Void) {
         let now = Date()
-        let pins = WidgetPinSelector.activePins(from: store.load(), at: now, limit: 3)
-        completion(KoyomiWidgetEntry(date: now, pins: pins.isEmpty && context.isPreview ? [Self.placeholderPin] : pins))
+        let allPins = store.load()
+        let pins = WidgetPinSelector.activePins(
+            from: allPins,
+            at: now,
+            limit: pinLimit(for: context.family)
+        )
+        let usesPlaceholder = pins.isEmpty && context.isPreview
+        completion(
+            KoyomiWidgetEntry(
+                date: now,
+                pins: usesPlaceholder ? [Self.placeholderPin] : pins,
+                totalActivePinCount: usesPlaceholder
+                    ? 1
+                    : WidgetPinSelector.activePinCount(from: allPins, at: now)
+            )
+        )
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<KoyomiWidgetEntry>) -> Void) {
         let now = Date()
-        let states = WidgetTimelinePlanner.states(from: store.load(), at: now, limit: 3)
-        let entries = states.map { KoyomiWidgetEntry(date: $0.date, pins: $0.pins) }
+        let allPins = store.load()
+        let states = WidgetTimelinePlanner.states(
+            from: allPins,
+            at: now,
+            limit: pinLimit(for: context.family)
+        )
+        let entries = states.map {
+            KoyomiWidgetEntry(
+                date: $0.date,
+                pins: $0.pins,
+                totalActivePinCount: WidgetPinSelector.activePinCount(
+                    from: allPins,
+                    at: $0.date
+                )
+            )
+        }
         let policy: TimelineReloadPolicy = entries.count == 1
             ? .after(now.addingTimeInterval(6 * 3_600))
             : .atEnd
         completion(Timeline(entries: entries, policy: policy))
+    }
+
+    private func pinLimit(for family: WidgetFamily) -> Int {
+        switch family {
+        case .systemMedium:
+            WidgetPinLayoutCapacity.medium
+        case .systemLarge:
+            WidgetPinLayoutCapacity.large
+        default:
+            WidgetPinLayoutCapacity.single
+        }
     }
 
     private static var placeholderPin: PinnedEvent {
@@ -51,6 +91,7 @@ struct KoyomiWidgetProvider: TimelineProvider {
 struct KoyomiWidgetView: View {
     @Environment(\.widgetFamily) private var family
     @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let entry: KoyomiWidgetEntry
 
     var body: some View {
@@ -58,6 +99,8 @@ struct KoyomiWidgetView: View {
             switch family {
             case .systemMedium:
                 mediumContent
+            case .systemLarge:
+                largeContent
             case .accessoryRectangular:
                 accessoryContent
             default:
@@ -114,30 +157,105 @@ struct KoyomiWidgetView: View {
 
     @ViewBuilder
     private var mediumContent: some View {
+        let usesAccessibilityLayout = dynamicTypeSize.isAccessibilitySize
+        let limits = WidgetPinLayoutCapacity.mediumVisibleLimits(
+            isAccessibilitySize: usesAccessibilityLayout
+        )
+
+        if usesAccessibilityLayout {
+            ViewThatFits(in: .vertical) {
+                pinnedListContent(limit: limits[0], rowSpacing: 5, indicatorHeight: 28)
+                pinnedListContent(limit: limits[1], rowSpacing: 4, indicatorHeight: 26)
+                pinnedListContent(limit: limits[2], rowSpacing: 3, indicatorHeight: 24)
+            }
+        } else {
+            pinnedListContent(
+                limit: limits[0],
+                rowSpacing: 9,
+                indicatorHeight: 31
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var largeContent: some View {
+        let usesAccessibilityLayout = dynamicTypeSize.isAccessibilitySize
+        let limits = WidgetPinLayoutCapacity.largeVisibleLimits(
+            isAccessibilitySize: usesAccessibilityLayout
+        )
+        let titleLineLimit = WidgetPinLayoutCapacity.titleLineLimit(
+            isAccessibilitySize: usesAccessibilityLayout
+        )
+
+        if usesAccessibilityLayout {
+            ViewThatFits(in: .vertical) {
+                pinnedListContent(limit: limits[0], rowSpacing: 6, indicatorHeight: 32, titleLineLimit: titleLineLimit)
+                pinnedListContent(limit: limits[1], rowSpacing: 5, indicatorHeight: 30, titleLineLimit: titleLineLimit)
+                pinnedListContent(limit: limits[2], rowSpacing: 4, indicatorHeight: 28, titleLineLimit: titleLineLimit)
+                pinnedListContent(limit: limits[3], rowSpacing: 3, indicatorHeight: 26, titleLineLimit: titleLineLimit)
+            }
+        } else {
+            ViewThatFits(in: .vertical) {
+                pinnedListContent(limit: limits[0], rowSpacing: 10, indicatorHeight: 34, titleLineLimit: titleLineLimit)
+                pinnedListContent(limit: limits[1], rowSpacing: 9, indicatorHeight: 33, titleLineLimit: titleLineLimit)
+                pinnedListContent(limit: limits[2], rowSpacing: 8, indicatorHeight: 32, titleLineLimit: titleLineLimit)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func pinnedListContent(
+        limit: Int,
+        rowSpacing: CGFloat,
+        indicatorHeight: CGFloat,
+        titleLineLimit: Int = 1
+    ) -> some View {
         if entry.pins.isEmpty {
             emptyContent
         } else {
-            VStack(alignment: .leading, spacing: 9) {
-                Label("ピン留め", systemImage: "pin.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(secondaryColor)
-                    .widgetAccentable()
-                ForEach(entry.pins.prefix(3)) { pin in
+            let hiddenCount = WidgetPinLayoutCapacity.hiddenCount(
+                totalPins: max(entry.totalActivePinCount, entry.pins.count),
+                visibleLimit: limit
+            )
+            VStack(alignment: .leading, spacing: rowSpacing) {
+                HStack(spacing: 5) {
+                    Label("ピン留め", systemImage: "pin.fill")
+                    Spacer(minLength: 4)
+                    if hiddenCount > 0 {
+                        Text("+\(hiddenCount)件")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(secondaryColor)
+                .widgetAccentable()
+                ForEach(entry.pins.prefix(limit)) { pin in
                     Link(destination: deepLink(for: pin)) {
                         HStack(spacing: 10) {
                             Capsule()
                                 .fill(Color(koyomiHex: pin.calendarColorHex))
-                                .frame(width: 4, height: 31)
+                                .frame(width: 4, height: indicatorHeight)
                                 .widgetAccentable()
                             Text(pin.titleMetadata.displayTitle)
                                 .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
+                                .lineLimit(titleLineLimit)
+                                .minimumScaleFactor(titleLineLimit == 1 ? 0.78 : 1)
                             Spacer(minLength: 6)
                             countdown(for: pin, large: false)
+                                .frame(
+                                    width: WidgetPinLayoutCapacity.countdownColumnWidth(
+                                        isAccessibilitySize: dynamicTypeSize.isAccessibilitySize
+                                    ),
+                                    alignment: .trailing
+                                )
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -174,10 +292,12 @@ struct KoyomiWidgetView: View {
     private func countdown(for pin: PinnedEvent, large: Bool) -> some View {
         let isUpcoming = entry.date < pin.startDate
         let target = isUpcoming ? pin.startDate : pin.endDate
-        return VStack(alignment: .leading, spacing: 1) {
+        return VStack(alignment: large ? .leading : .trailing, spacing: 1) {
             Text(isUpcoming ? "あと" : "終了まで")
                 .font(.caption2)
                 .foregroundStyle(secondaryColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
             Text(target, style: .timer)
                 .font(large ? .title3.bold().monospacedDigit() : .caption.bold().monospacedDigit())
                 .lineLimit(1)
@@ -198,7 +318,7 @@ struct KoyomiPinnedCountdownWidget: Widget {
         }
         .configurationDisplayName("ピン留めカウントダウン")
         .description("大切な予定までの時間を、いつでも確認できます。")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
     }
 }
 
