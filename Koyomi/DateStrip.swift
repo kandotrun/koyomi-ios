@@ -20,7 +20,10 @@ struct DateStrip: View {
                         date: date,
                         isSelected: Calendar.current.isDate(date, inSameDayAs: model.selectedDate),
                         isToday: Calendar.current.isDateInToday(date),
-                        onSelect: { model.selectDate(date) }
+                        onSelect: {
+                            KoyomiHaptics.perform(.selectDate)
+                            model.selectDate(date)
+                        }
                     )
                 }
             }
@@ -42,7 +45,7 @@ private struct DateChip: View {
             VStack(spacing: 5) {
                 Text(date.formatted(.dateTime.weekday(.narrow).locale(Locale(identifier: "ja_JP"))))
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.62))
+                    .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.72))
                 Text(date.formatted(.dateTime.day()))
                     .font(.headline.monospacedDigit())
                 Circle()

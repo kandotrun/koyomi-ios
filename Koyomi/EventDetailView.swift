@@ -41,6 +41,7 @@ struct EventDetailView: View {
                     .koyomiGlass(tint: tint, cornerRadius: 30)
 
                     Button {
+                        KoyomiHaptics.perform(.togglePin)
                         onTogglePin()
                         dismiss()
                     } label: {
@@ -60,7 +61,10 @@ struct EventDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("閉じる") { dismiss() }
+                    Button("閉じる") {
+                        KoyomiHaptics.perform(.dismiss)
+                        dismiss()
+                    }
                 }
             }
         }

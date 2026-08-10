@@ -1,8 +1,17 @@
 import SwiftUI
 
+private enum CalendarDisplayMode: String, CaseIterable, Identifiable {
+    case day = "1日"
+    case upcoming = "予定一覧"
+
+    var id: Self { self }
+}
+
 struct KoyomiRootView: View {
     @ObservedObject var model: CalendarViewModel
+    @State private var displayMode: CalendarDisplayMode = .day
     @State private var isDatePickerPresented = false
+    @State private var isCalendarFilterPresented = false
 
     var body: some View {
         NavigationStack {
@@ -29,18 +38,39 @@ struct KoyomiRootView: View {
                 if model.authorizationStatus == .fullAccess {
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         Button {
-                            model.selectToday()
+                            KoyomiHaptics.perform(.changeCalendarFilter)
+                            isCalendarFilterPresented = true
                         } label: {
-                            Text("今日")
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "line.3.horizontal.decrease")
+                                if model.isCalendarFilterActive {
+                                    Circle()
+                                        .fill(Color.accentColor)
+                                        .frame(width: 6, height: 6)
+                                        .offset(x: 3, y: -2)
+                                }
+                            }
+                            .frame(width: 18, height: 18)
                         }
-                        .accessibilityLabel("今日へ移動")
+                        .accessibilityLabel("表示するカレンダーを選ぶ")
 
-                        Button {
-                            isDatePickerPresented = true
-                        } label: {
-                            Image(systemName: "calendar")
+                        if displayMode == .day {
+                            Button {
+                                KoyomiHaptics.perform(.selectDate)
+                                model.selectToday()
+                            } label: {
+                                Text("今日")
+                            }
+                            .accessibilityLabel("今日へ移動")
+
+                            Button {
+                                KoyomiHaptics.perform(.selectDate)
+                                isDatePickerPresented = true
+                            } label: {
+                                Image(systemName: "calendar")
+                            }
+                            .accessibilityLabel("日付を選ぶ")
                         }
-                        .accessibilityLabel("日付を選ぶ")
                     }
                 }
             }
@@ -55,9 +85,15 @@ struct KoyomiRootView: View {
                 DatePickerSheet(
                     selection: Binding(
                         get: { model.selectedDate },
-                        set: { model.selectDate($0) }
+                        set: {
+                            KoyomiHaptics.perform(.selectDate)
+                            model.selectDate($0)
+                        }
                     )
                 )
+            }
+            .sheet(isPresented: $isCalendarFilterPresented) {
+                CalendarFilterSheet(model: model)
             }
             .overlay(alignment: .top) {
                 if let message = model.errorMessage {
@@ -76,15 +112,29 @@ struct KoyomiRootView: View {
 
     private var calendarContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
+            VStack(alignment: .leading, spacing: 24) {
                 PinnedEventsSection(model: model)
-                DateStrip(model: model)
-                AgendaSection(model: model)
+                displayModePicker
+
+                switch displayMode {
+                case .day:
+                    DateStrip(model: model)
+                    AgendaSection(model: model)
+                case .upcoming:
+                    UpcomingEventsSection(model: model)
+                }
             }
-            .padding(.vertical, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 36)
         }
         .scrollIndicators(.hidden)
-        .refreshable { model.refresh() }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: 20)
+        }
+        .refreshable {
+            KoyomiHaptics.perform(.refresh)
+            model.refresh()
+        }
         .overlay {
             if model.isLoading {
                 ProgressView()
@@ -94,6 +144,20 @@ struct KoyomiRootView: View {
                     .accessibilityLabel("読み込み中")
             }
         }
+    }
+
+    private var displayModePicker: some View {
+        Picker("予定の表示", selection: $displayMode) {
+            ForEach(CalendarDisplayMode.allCases) { mode in
+                Text(mode.rawValue).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 20)
+        .onChange(of: displayMode) { _, _ in
+            KoyomiHaptics.perform(.switchAgenda)
+        }
+        .accessibilityIdentifier("calendar-display-mode")
     }
 }
 
@@ -110,7 +174,10 @@ private struct DatePickerSheet: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("完了") { dismiss() }
+                        Button("完了") {
+                            KoyomiHaptics.perform(.dismiss)
+                            dismiss()
+                        }
                     }
                 }
         }

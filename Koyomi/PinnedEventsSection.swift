@@ -12,7 +12,7 @@ struct PinnedEventsSection: View {
                 if !model.pinnedEvents.isEmpty {
                     Text("\(model.pinnedEvents.count)件")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.7))
                 }
             }
             .padding(.horizontal, 20)
@@ -37,8 +37,14 @@ struct PinnedEventsSection: View {
                             ForEach(model.displayedPins) { pin in
                                 PinnedCountdownCard(
                                     pin: pin,
-                                    onOpen: { model.selectedEvent = model.event(for: pin) },
-                                    onRemove: { model.removePin(pin) }
+                                    onOpen: {
+                                        KoyomiHaptics.perform(.openEvent)
+                                        model.selectedEvent = model.event(for: pin)
+                                    },
+                                    onRemove: {
+                                        KoyomiHaptics.perform(.togglePin)
+                                        model.removePin(pin)
+                                    }
                                 )
                             }
                         }

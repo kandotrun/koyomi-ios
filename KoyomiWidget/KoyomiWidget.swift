@@ -9,7 +9,7 @@ struct KoyomiWidgetEntry: TimelineEntry {
 }
 
 struct KoyomiWidgetProvider: TimelineProvider {
-    private let store = PinnedEventsStore()
+    private let store = PinnedEventsStore(storage: KeychainPinnedEventsDataStorage())
 
     func placeholder(in context: Context) -> KoyomiWidgetEntry {
         KoyomiWidgetEntry(date: .now, pins: [Self.placeholderPin])

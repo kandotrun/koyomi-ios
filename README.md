@@ -27,7 +27,7 @@ Googleカレンダーも、iOSの「カレンダー」に同期済みであれ�
 
 - バックエンド、ログイン、分析SDK、外部通信はありません。
 - カレンダー内容を端末外へ送信しません。
-- App Groupに保存するのは、ユーザーがピン留めした予定の表示用スナップショットだけです。
+- 共有Keychainに保存するのは、ユーザーがピン留めした予定の表示用スナップショットだけです。
 - スナップショットにはタイトル、開始・終了、終日フラグ、カレンダー名・色、場所を含みます。メモ、参加者、URL、アラームは保存しません。
 - Widget extensionはEventKitへ直接アクセスせず、共有スナップショットだけを読みます。
 - カレンダー権限は初回画面のボタンを押したときに要求します。拒否・制限・書き込み専用の各状態には個別の案内があります。
@@ -37,7 +37,7 @@ Googleカレンダーも、iOSの「カレンダー」に同期済みであれ�
 - macOS 26
 - Xcode 26.6
 - iOS 26.0以降のiPhone
-- App Groupsを有効化できるApple Developer Team
+- 同一TeamでKeychain Sharingを有効化できるApple Developer環境
 
 ## 開発
 
@@ -59,21 +59,20 @@ CIはGitHub-hosted `macos-26` / Xcode 26.6で、Swift Packageのユニットテ�
 
 ## 実機署名
 
-初回のみ、Xcodeの **Signing & Capabilities** で次を設定します。
+`Koyomi` と `KoyomiWidget` は同じApple Developer Teamで署名し、`$(AppIdentifierPrefix)run.kan.koyomi.shared` Keychain access groupを共有します。App GroupのDeveloper Portal設定は不要です。
 
-1. `Koyomi` と `KoyomiWidget` のTeamを同じApple Developer Teamへ変更する。
-2. App Groups capabilityを両ターゲットで有効化する。
-3. `group.run.kan.koyomi` をDeveloper Portalへ登録し、両ターゲットへ追加する。
-4. Bundle ID `run.kan.koyomi` と `run.kan.koyomi.widget` が自分のTeamで使えない場合は、`project.yml`、両entitlements、`KoyomiAppGroup.identifier`を同じ新しい識別子へ変更して `xcodegen generate` を実行する。
-5. iPhoneを接続して `Koyomi` schemeをRunする。
+1. `Koyomi` と `KoyomiWidget` のTeamを同じApple Developer Teamへ設定する。
+2. Bundle ID `run.kan.koyomi` と `run.kan.koyomi.widget` がTeamで利用可能か確認する。
+3. `xcodegen generate` を実行する。
+4. iPhoneを接続して `Koyomi` schemeをRunする。
 
-署名用Team IDや証明書はリポジトリに固定していません。
+`project.yml`はKanのTeam IDを既定値にしています。別Teamで利用する場合はTeamとBundle IDを変更してください。共有Keychain groupの`$(AppIdentifierPrefix)`は署名Teamに合わせて展開されます。
 
 ## 構成
 
 - `Shared/` — 予定スナップショット、カウントダウン、ピン永続化、日付範囲・再照合ロジック
 - `Koyomi/` — EventKitアダプター、状態管理、Liquid Glass UI
-- `KoyomiWidget/` — App Groupを読むWidgetKit extension
+- `KoyomiWidget/` — 共有Keychainのピンを読むWidgetKit extension
 - `KoyomiTests/` — Foundation中心のユニットテスト
 - `KoyomiUITests/` — 権限不要のデモデータを使うUIテスト
 

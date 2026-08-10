@@ -57,8 +57,8 @@ targets:
     entitlements:
       path: Koyomi/Koyomi.entitlements
       properties:
-        com.apple.security.application-groups:
-          - group.run.kan.koyomi
+        keychain-access-groups:
+          - "$(AppIdentifierPrefix)run.kan.koyomi.shared"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: run.kan.koyomi
@@ -86,8 +86,8 @@ targets:
     entitlements:
       path: KoyomiWidget/KoyomiWidget.entitlements
       properties:
-        com.apple.security.application-groups:
-          - group.run.kan.koyomi
+        keychain-access-groups:
+          - "$(AppIdentifierPrefix)run.kan.koyomi.shared"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: run.kan.koyomi.widget
