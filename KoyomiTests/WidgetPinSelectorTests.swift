@@ -47,6 +47,22 @@ final class WidgetPinSelectorTests: XCTestCase {
         )
     }
 
+    func testOverdueEstimatedTaskRemainsVisibleUntilCompleted() {
+        var overdue = makeEvent(id: "estimated", start: -30 * 86_400, end: -3 * 86_400)
+        overdue.title = "指輪の刻印 #タスク #見込み"
+        overdue.isAllDay = true
+        var completed = overdue
+        completed.id = "completed"
+        completed.endDate = now.addingTimeInterval(11 * 86_400)
+        completed.title = "完了済み #タスク #見込み #完了"
+
+        XCTAssertEqual(
+            WidgetPinSelector.activePins(from: [completed, overdue], at: now, limit: 3).map(\.id),
+            ["estimated"]
+        )
+        XCTAssertEqual(WidgetPinSelector.activePinCount(from: [completed, overdue], at: now), 1)
+    }
+
     func testWidgetLayoutCapacityShowsMorePinsInTheLargeFamily() {
         XCTAssertEqual(WidgetPinLayoutCapacity.single, 1)
         XCTAssertEqual(WidgetPinLayoutCapacity.medium, 3)

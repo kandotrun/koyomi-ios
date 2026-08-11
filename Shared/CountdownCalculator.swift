@@ -3,6 +3,7 @@ import Foundation
 public enum CountdownPhase: Equatable, Sendable {
     case upcoming
     case ongoing
+    case overdue
     case ended
 }
 
@@ -22,6 +23,19 @@ public struct CountdownPresentation: Equatable, Sendable {
 
 public enum CountdownCalculator {
     public static func presentation(for event: PinnedEvent, now: Date = .now) -> CountdownPresentation {
+        if event.isEstimatedDateWindow {
+            guard event.isOpenEstimatedTask else {
+                return CountdownPresentation(
+                    phase: .ended,
+                    label: "完了",
+                    value: "完了",
+                    targetDate: nil
+                )
+            }
+            if let estimated = estimatedPresentation(for: event, now: now) {
+                return estimated
+            }
+        }
         if now < event.startDate {
             return CountdownPresentation(
                 phase: .upcoming,
@@ -46,6 +60,37 @@ public enum CountdownCalculator {
             value: "終了",
             targetDate: nil
         )
+    }
+
+    private static func estimatedPresentation(
+        for event: PinnedEvent,
+        now: Date,
+        calendar: Calendar = .current
+    ) -> CountdownPresentation? {
+        guard let window = CalendarEstimatedWindow(event: event, calendar: calendar) else { return nil }
+        switch window.status(at: now, calendar: calendar) {
+        case let .upcoming(daysUntilStart):
+            return CountdownPresentation(
+                phase: .upcoming,
+                label: "見込み期間まで",
+                value: "\(daysUntilStart)日",
+                targetDate: window.startDate
+            )
+        case let .withinWindow(daysUntilLatest):
+            return CountdownPresentation(
+                phase: .ongoing,
+                label: "見込み期間内・遅くとも",
+                value: "\(daysUntilLatest)日",
+                targetDate: window.latestDate
+            )
+        case let .overdue(days):
+            return CountdownPresentation(
+                phase: .overdue,
+                label: "要確認・超過",
+                value: "\(days)日",
+                targetDate: nil
+            )
+        }
     }
 
     private static func format(_ interval: TimeInterval) -> String {

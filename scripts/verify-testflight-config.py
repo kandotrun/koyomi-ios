@@ -30,11 +30,11 @@ def main() -> None:
     project = (ROOT / "project.yml").read_text(encoding="utf-8")
     require_yaml_setting(project, "DEVELOPMENT_TEAM", TEAM_ID)
     require_yaml_setting(project, "CODE_SIGN_STYLE", "Automatic")
-    require_yaml_setting(project, "MARKETING_VERSION", "1.0.0")
-    require_yaml_setting(project, "CURRENT_PROJECT_VERSION", "1")
+    require_yaml_setting(project, "MARKETING_VERSION", "2.0.0")
+    require_yaml_setting(project, "CURRENT_PROJECT_VERSION", "2")
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", APP_ID)
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", WIDGET_ID)
-    assert project.count('TARGETED_DEVICE_FAMILY: "1"') == 3, (
+    assert project.count('TARGETED_DEVICE_FAMILY: "1"') == 4, (
         "every generated target must be iPhone-only"
     )
 

@@ -47,6 +47,36 @@ final class UpcomingAgendaBuilderTests: XCTestCase {
         )
     }
 
+    func testOverdueEstimatedTaskStaysUnderTodayUntilCompleted() {
+        let now = date(2026, 8, 10, 12)
+        var overdue = event(
+            "overdue-estimated",
+            start: date(2026, 7, 1, 0),
+            end: date(2026, 8, 1, 0),
+            allDay: true
+        )
+        overdue.title = "指輪の刻印 #タスク #見込み"
+        var completed = overdue
+        completed.id = "completed-estimated"
+        completed.endDate = date(2026, 9, 2, 0)
+        completed.title += " #完了"
+        let endedOrdinary = event(
+            "ended-ordinary",
+            start: date(2026, 7, 1, 0),
+            end: date(2026, 8, 1, 0),
+            allDay: true
+        )
+
+        let sections = UpcomingAgendaBuilder.sections(
+            from: [endedOrdinary, completed, overdue],
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(sections.map(\.day), [date(2026, 8, 10, 0)])
+        XCTAssertEqual(sections[0].events.map(\.id), ["overdue-estimated"])
+    }
+
     private func event(_ id: String, start: Date, end: Date, allDay: Bool = false) -> CalendarEvent {
         CalendarEvent(
             id: id,

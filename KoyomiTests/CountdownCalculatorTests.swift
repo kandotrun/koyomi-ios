@@ -56,6 +56,40 @@ final class CountdownCalculatorTests: XCTestCase {
         )
     }
 
+    func testEstimatedWindowUsesDayLevelCopyBeforeDuringAndAfterTheWindow() {
+        var upcoming = makeEvent(
+            start: now.addingTimeInterval(14 * 86_400),
+            end: now.addingTimeInterval(43 * 86_400)
+        )
+        upcoming.title = "指輪の刻印 #タスク #見込み"
+        upcoming.isAllDay = true
+        var ongoing = upcoming
+        ongoing.startDate = now.addingTimeInterval(-14 * 86_400)
+        ongoing.endDate = now.addingTimeInterval(15 * 86_400)
+        var overdue = upcoming
+        overdue.startDate = now.addingTimeInterval(-31 * 86_400)
+        overdue.endDate = now.addingTimeInterval(-2 * 86_400)
+
+        let before = CountdownCalculator.presentation(for: upcoming, now: now)
+        let inside = CountdownCalculator.presentation(for: ongoing, now: now)
+        let late = CountdownCalculator.presentation(for: overdue, now: now)
+        var completed = upcoming
+        completed.title += " #完了"
+        let done = CountdownCalculator.presentation(for: completed, now: now)
+
+        XCTAssertEqual(before.label, "見込み期間まで")
+        XCTAssertEqual(before.value, "14日")
+        XCTAssertEqual(inside.label, "見込み期間内・遅くとも")
+        XCTAssertEqual(inside.value, "14日")
+        XCTAssertEqual(late.phase, .overdue)
+        XCTAssertEqual(late.label, "要確認・超過")
+        XCTAssertEqual(late.value, "3日")
+        XCTAssertEqual(done.phase, .ended)
+        XCTAssertEqual(done.label, "完了")
+        XCTAssertEqual(done.value, "完了")
+        XCTAssertNil(done.targetDate)
+    }
+
     private func makeEvent(start: Date, end: Date) -> PinnedEvent {
         PinnedEvent(
             id: "event@\(start.timeIntervalSince1970)",

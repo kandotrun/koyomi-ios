@@ -12,6 +12,7 @@ struct KoyomiRootView: View {
     @State private var displayMode: CalendarDisplayMode = .day
     @State private var isDatePickerPresented = false
     @State private var isCalendarFilterPresented = false
+    @State private var editorContext: CalendarItemEditorContext?
 
     var body: some View {
         NavigationStack {
@@ -34,9 +35,36 @@ struct KoyomiRootView: View {
                 }
             }
             .navigationTitle("こよみ")
+            .searchable(
+                text: $model.searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "予定・タスクを検索"
+            )
             .toolbar {
                 if model.authorizationStatus == .fullAccess {
                     ToolbarItemGroup(placement: .topBarTrailing) {
+                        Menu {
+                            Button {
+                                editorContext = CalendarItemEditorContext(purpose: .create(.event))
+                            } label: {
+                                Label("予定を追加", systemImage: "calendar.badge.plus")
+                            }
+                            Button {
+                                editorContext = CalendarItemEditorContext(purpose: .create(.task))
+                            } label: {
+                                Label("タスクを追加", systemImage: "checkmark.circle.badge.plus")
+                            }
+                            Button {
+                                editorContext = CalendarItemEditorContext(purpose: .createEstimatedTask)
+                            } label: {
+                                Label("見込みタスクを追加", systemImage: "calendar.badge.clock")
+                            }
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityLabel("予定またはタスクを追加")
+                        .accessibilityIdentifier("add-calendar-item")
+
                         Button {
                             KoyomiHaptics.perform(.changeCalendarFilter)
                             isCalendarFilterPresented = true
@@ -77,9 +105,31 @@ struct KoyomiRootView: View {
             .sheet(item: $model.selectedEvent) { event in
                 EventDetailView(
                     event: event,
-                    isPinned: model.isPinned(event),
-                    onTogglePin: { model.togglePin(event) }
+                    calendars: model.calendars,
+                    isPinned: model.isPinned,
+                    onTogglePin: model.togglePin,
+                    onUpdate: { event, draft, scope in
+                        model.updateItem(event, with: draft, scope: scope)
+                    },
+                    onDuplicate: { draft in
+                        model.createItem(draft)
+                    },
+                    onSetTaskCompleted: { event, completed, scope in
+                        model.setTaskCompleted(event, completed: completed, scope: scope)
+                    },
+                    onDelete: { event, scope in
+                        model.deleteItem(event, scope: scope)
+                    }
                 )
+            }
+            .sheet(item: $editorContext) { context in
+                CalendarItemEditorSheet(
+                    context: context,
+                    calendars: model.calendars,
+                    selectedDate: model.selectedDate
+                ) { draft, _ in
+                    model.createItem(draft)
+                }
             }
             .sheet(isPresented: $isDatePickerPresented) {
                 DatePickerSheet(
@@ -112,11 +162,18 @@ struct KoyomiRootView: View {
 
     private var calendarContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 PinnedEventsSection(model: model)
                 displayModePicker
-                if !model.availableTags.isEmpty {
-                    EventTagFilterBar(model: model)
+                filterGroup(title: "状態") {
+                    CalendarItemFilterBar(model: model)
+                }
+                filterGroup(title: "タグ", showsScrollHint: !model.availableTags.isEmpty) {
+                    if model.availableTags.isEmpty {
+                        EventTagEmptyState()
+                    } else {
+                        EventTagFilterBar(model: model)
+                    }
                 }
 
                 switch displayMode {
@@ -147,6 +204,31 @@ struct KoyomiRootView: View {
                     .accessibilityLabel("読み込み中")
             }
         }
+    }
+
+    private func filterGroup<Content: View>(
+        title: String,
+        showsScrollHint: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if showsScrollHint {
+                    Label("横にスクロール", systemImage: "arrow.left.and.right")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.horizontal, 20)
+            content()
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(title)フィルター")
     }
 
     private var displayModePicker: some View {

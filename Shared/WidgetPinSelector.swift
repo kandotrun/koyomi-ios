@@ -5,7 +5,7 @@ public enum WidgetPinSelector {
         from events: [PinnedEvent],
         at now: Date = .now
     ) -> Int {
-        events.lazy.filter { $0.endDate > now }.count
+        events.lazy.filter { isVisible($0, at: now) }.count
     }
 
     public static func activePins(
@@ -16,7 +16,7 @@ public enum WidgetPinSelector {
         guard limit > 0 else { return [] }
 
         return events
-            .filter { $0.endDate > now }
+            .filter { isVisible($0, at: now) }
             .sorted { lhs, rhs in
                 let lhsOngoing = lhs.startDate <= now
                 let rhsOngoing = rhs.startDate <= now
@@ -27,6 +27,13 @@ public enum WidgetPinSelector {
             }
             .prefix(limit)
             .map { $0 }
+    }
+
+    private static func isVisible(_ event: PinnedEvent, at now: Date) -> Bool {
+        if event.isEstimatedDateWindow {
+            return event.isOpenEstimatedTask
+        }
+        return event.endDate > now
     }
 }
 

@@ -69,62 +69,96 @@ private struct PinnedCountdownCard: View {
     private var metadata: EventTitleMetadata { pin.titleMetadata }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 13) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    if !metadata.containsTag(pin.calendarName) {
-                        Text(pin.calendarName)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.primary.opacity(0.68))
+        ZStack(alignment: .topTrailing) {
+            Button(action: onOpen) {
+                VStack(alignment: .leading, spacing: 13) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            if !metadata.containsTag(pin.calendarName) {
+                                Text(pin.calendarName)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.primary.opacity(0.68))
+                            }
+                            Text(metadata.displayTitle)
+                                .font(.title3.bold())
+                                .strikethrough(metadata.containsTag("タスク") && metadata.containsTag("完了"))
+                                .foregroundStyle(
+                                    metadata.containsTag("タスク") && metadata.containsTag("完了")
+                                        ? .secondary
+                                        : .primary
+                                )
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                            EventTagSummary(tags: metadata.tags)
+                        }
+                        Spacer(minLength: 44)
                     }
-                    Text(metadata.displayTitle)
-                        .font(.title3.bold())
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    EventTagSummary(tags: metadata.tags)
-                }
-                Spacer(minLength: 8)
-                Button(action: onRemove) {
-                    Image(systemName: "pin.slash.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(width: 32, height: 32)
-                }
-                .accessibilityLabel("\(metadata.displayTitle)のピン留めを解除")
-            }
 
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                let presentation = CountdownCalculator.presentation(for: pin, now: context.date)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(presentation.label)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.primary.opacity(0.68))
-                    Text(presentation.value)
-                        .font(.system(.title2, design: .rounded, weight: .bold))
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                        .accessibilityLabel("\(presentation.label) \(presentation.value)")
-                }
-            }
+                    if pin.isEstimatedDateWindow {
+                        TimelineView(.periodic(from: .now, by: 3_600)) { context in
+                            countdown(at: context.date)
+                        }
+                    } else {
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            countdown(at: context.date)
+                        }
+                    }
 
-            HStack(spacing: 8) {
-                Image(systemName: pin.isAllDay ? "sun.max" : "clock")
-                Text(dateText)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        Image(systemName: pin.isEstimatedDateWindow ? "calendar.badge.clock" : (pin.isAllDay ? "sun.max" : "clock"))
+                        Text(dateText)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.primary.opacity(0.68))
+                }
+                .padding(18)
+                .frame(width: 330, alignment: .topLeading)
+                .frame(minHeight: metadata.tags.isEmpty ? 174 : 190, alignment: .topLeading)
+                .contentShape(.rect)
             }
-            .font(.caption)
-            .foregroundStyle(.primary.opacity(0.68))
+            .buttonStyle(.plain)
+            .koyomiGlass(tint: tint, cornerRadius: 28, interactive: true)
+            .accessibilityLabel("\(metadata.displayTitle)、\(pin.calendarName)、\(dateText)")
+            .accessibilityHint("ダブルタップして詳細を開く")
+            .accessibilityIdentifier("pin-card-\(pin.id)")
+
+            Button(action: onRemove) {
+                Image(systemName: "pin.slash.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .padding(.top, 12)
+            .padding(.trailing, 12)
+            .accessibilityLabel("\(metadata.displayTitle)のピン留めを解除")
         }
-        .padding(18)
-        .frame(width: 330, alignment: .topLeading)
-        .frame(minHeight: metadata.tags.isEmpty ? 174 : 190, alignment: .topLeading)
-        .contentShape(.rect)
-        .onTapGesture(perform: onOpen)
-        .koyomiGlass(tint: tint, cornerRadius: 28, interactive: true)
-        .accessibilityIdentifier("pin-card-\(pin.id)")
+    }
+
+    private func countdown(at date: Date) -> some View {
+        let presentation = CountdownCalculator.presentation(for: pin, now: date)
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(presentation.label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.primary.opacity(0.68))
+            Text(presentation.value)
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .accessibilityLabel("\(presentation.label) \(presentation.value)")
+        }
     }
 
     private var dateText: String {
+        if let window = CalendarEstimatedWindow(event: pin) {
+            let start = window.startDate.formatted(
+                .dateTime.month(.abbreviated).day().locale(Locale(identifier: "ja_JP"))
+            )
+            let latest = window.latestDate.formatted(
+                .dateTime.month(.abbreviated).day().locale(Locale(identifier: "ja_JP"))
+            )
+            return "見込み期間 \(start)〜\(latest)"
+        }
         if pin.isAllDay {
             return pin.startDate.formatted(
                 .dateTime.month(.abbreviated).day().weekday(.short).locale(Locale(identifier: "ja_JP"))

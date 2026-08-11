@@ -290,18 +290,38 @@ struct KoyomiWidgetView: View {
     }
 
     private func countdown(for pin: PinnedEvent, large: Bool) -> some View {
+        let presentation = CountdownCalculator.presentation(for: pin, now: entry.date)
         let isUpcoming = entry.date < pin.startDate
         let target = isUpcoming ? pin.startDate : pin.endDate
+        let label = pin.isEstimatedDateWindow
+            ? estimatedWidgetLabel(for: presentation.phase)
+            : (isUpcoming ? "あと" : "終了まで")
         return VStack(alignment: large ? .leading : .trailing, spacing: 1) {
-            Text(isUpcoming ? "あと" : "終了まで")
+            Text(label)
                 .font(.caption2)
                 .foregroundStyle(secondaryColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
-            Text(target, style: .timer)
-                .font(large ? .title3.bold().monospacedDigit() : .caption.bold().monospacedDigit())
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
+            if pin.isEstimatedDateWindow {
+                Text(presentation.value)
+                    .font(large ? .title3.bold().monospacedDigit() : .caption.bold().monospacedDigit())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            } else {
+                Text(target, style: .timer)
+                    .font(large ? .title3.bold().monospacedDigit() : .caption.bold().monospacedDigit())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+        }
+    }
+
+    private func estimatedWidgetLabel(for phase: CountdownPhase) -> String {
+        switch phase {
+        case .upcoming: "見込みまで"
+        case .ongoing: "期間内・遅くとも"
+        case .overdue: "要確認・超過"
+        case .ended: "終了"
         }
     }
 

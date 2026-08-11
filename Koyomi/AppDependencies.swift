@@ -11,7 +11,11 @@ struct AppDependencies {
             let suiteName = "run.kan.koyomi.ui-testing"
             let defaults = UserDefaults(suiteName: suiteName) ?? .standard
             defaults.removePersistentDomain(forName: suiteName)
-            let source = DemoCalendarSource()
+            let source = DemoCalendarSource(
+                shouldFailMutations: ProcessInfo.processInfo.arguments.contains(
+                    "-ui-testing-fail-mutations"
+                )
+            )
             let store = PinnedEventsStore(defaults: defaults)
             try? store.save([source.seededPin])
             return AppDependencies(

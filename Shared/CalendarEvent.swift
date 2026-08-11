@@ -12,6 +12,12 @@ public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
     public var calendarName: String
     public var calendarColorHex: String
     public var location: String?
+    public var notes: String?
+    public var alarmOffsets: [TimeInterval]
+    public var recurrence: CalendarRecurrenceRule?
+    public var isRecurring: Bool
+    public var canEdit: Bool
+    public var lastModifiedDate: Date?
 
     public init(
         id: String,
@@ -24,7 +30,13 @@ public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
         calendarID: String = "",
         calendarName: String,
         calendarColorHex: String,
-        location: String?
+        location: String?,
+        notes: String? = nil,
+        alarmOffsets: [TimeInterval] = [],
+        recurrence: CalendarRecurrenceRule? = nil,
+        isRecurring: Bool = false,
+        canEdit: Bool = false,
+        lastModifiedDate: Date? = nil
     ) {
         self.id = id
         self.eventIdentifier = eventIdentifier
@@ -37,6 +49,12 @@ public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
         self.calendarName = calendarName
         self.calendarColorHex = calendarColorHex
         self.location = location
+        self.notes = notes
+        self.alarmOffsets = alarmOffsets
+        self.recurrence = recurrence
+        self.isRecurring = isRecurring
+        self.canEdit = canEdit
+        self.lastModifiedDate = lastModifiedDate
     }
 
     public var pinnedSnapshot: PinnedEvent {
