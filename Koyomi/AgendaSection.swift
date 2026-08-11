@@ -38,7 +38,6 @@ struct AgendaSection: View {
                                 model.togglePin(event)
                             }
                         )
-                        .accessibilityIdentifier("agenda-event-\(event.eventIdentifier)")
                     }
                 }
             }
@@ -79,6 +78,7 @@ struct AgendaEventRow: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("agenda-event-\(event.eventIdentifier)")
 
             Button(action: onTogglePin) {
                 Image(systemName: isPinned ? "pin.slash.fill" : "pin")
@@ -91,6 +91,7 @@ struct AgendaEventRow: View {
                     ? "\(metadata.displayTitle)のピン留めを解除"
                     : "\(metadata.displayTitle)をピン留め"
             )
+            .accessibilityIdentifier("agenda-pin-\(event.eventIdentifier)")
         }
         .padding(12)
         .frame(minHeight: 72)

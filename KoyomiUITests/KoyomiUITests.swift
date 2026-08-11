@@ -128,7 +128,7 @@ final class KoyomiUITests: XCTestCase {
 
     func testPinButtonAddsAnAgendaEventToPinnedEvents() {
         let app = launchDemo()
-        let pinButton = app.buttons["歯科検診をピン留め"]
+        let pinButton = app.buttons["agenda-pin-demo-dentist"]
         XCTAssertTrue(pinButton.waitForExistence(timeout: 5))
         if !pinButton.isHittable {
             app.swipeUp()
