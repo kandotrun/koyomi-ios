@@ -1,6 +1,6 @@
 import SwiftUI
 
-private enum CalendarDisplayMode: String, CaseIterable, Identifiable {
+enum CalendarDisplayMode: String, CaseIterable, Identifiable {
     case day = "1日"
     case upcoming = "予定一覧"
 
@@ -10,6 +10,8 @@ private enum CalendarDisplayMode: String, CaseIterable, Identifiable {
 struct KoyomiRootView: View {
     @ObservedObject var model: CalendarViewModel
     @State private var displayMode: CalendarDisplayMode = .day
+    @State private var isSearchPresented = false
+    @FocusState private var isSearchFocused: Bool
     @State private var isDatePickerPresented = false
     @State private var isCalendarFilterPresented = false
     @State private var editorContext: CalendarItemEditorContext?
@@ -35,14 +37,36 @@ struct KoyomiRootView: View {
                 }
             }
             .navigationTitle("こよみ")
-            .searchable(
-                text: $model.searchText,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "予定・タスクを検索"
-            )
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if model.authorizationStatus == .fullAccess {
                     ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button {
+                            isSearchPresented = true
+                            Task { @MainActor in isSearchFocused = true }
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                        }
+                        .accessibilityLabel("予定・タスクを検索")
+                        .accessibilityIdentifier("show-calendar-search")
+
+                        Button {
+                            KoyomiHaptics.perform(.changeCalendarFilter)
+                            isCalendarFilterPresented = true
+                        } label: {
+                            Image(
+                                systemName: isAnyFilterActive
+                                    ? "line.3.horizontal.decrease.circle.fill"
+                                    : "line.3.horizontal.decrease.circle"
+                            )
+                        }
+                        .accessibilityLabel(
+                            isAnyFilterActive
+                                ? "表示と絞り込み、条件を適用中"
+                                : "表示と絞り込み"
+                        )
+                        .accessibilityIdentifier("display-options")
+
                         Menu {
                             Button {
                                 editorContext = CalendarItemEditorContext(purpose: .create(.event))
@@ -64,41 +88,6 @@ struct KoyomiRootView: View {
                         }
                         .accessibilityLabel("予定またはタスクを追加")
                         .accessibilityIdentifier("add-calendar-item")
-
-                        Button {
-                            KoyomiHaptics.perform(.changeCalendarFilter)
-                            isCalendarFilterPresented = true
-                        } label: {
-                            ZStack(alignment: .topTrailing) {
-                                Image(systemName: "line.3.horizontal.decrease")
-                                if model.isCalendarFilterActive {
-                                    Circle()
-                                        .fill(Color.accentColor)
-                                        .frame(width: 6, height: 6)
-                                        .offset(x: 3, y: -2)
-                                }
-                            }
-                            .frame(width: 18, height: 18)
-                        }
-                        .accessibilityLabel("表示するカレンダーを選ぶ")
-
-                        if displayMode == .day {
-                            Button {
-                                KoyomiHaptics.perform(.selectDate)
-                                model.selectToday()
-                            } label: {
-                                Text("今日")
-                            }
-                            .accessibilityLabel("今日へ移動")
-
-                            Button {
-                                KoyomiHaptics.perform(.selectDate)
-                                isDatePickerPresented = true
-                            } label: {
-                                Image(systemName: "calendar")
-                            }
-                            .accessibilityLabel("日付を選ぶ")
-                        }
                     }
                 }
             }
@@ -143,7 +132,7 @@ struct KoyomiRootView: View {
                 )
             }
             .sheet(isPresented: $isCalendarFilterPresented) {
-                CalendarFilterSheet(model: model)
+                CalendarFilterSheet(model: model, displayMode: $displayMode)
             }
             .overlay(alignment: .top) {
                 if let message = model.errorMessage {
@@ -162,29 +151,35 @@ struct KoyomiRootView: View {
 
     private var calendarContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
+                if isSearchPresented || !model.searchText.isEmpty {
+                    searchField
+                }
+
+                if displayMode == .day {
+                    DateStrip(
+                        model: model,
+                        onOpenCalendar: {
+                            KoyomiHaptics.perform(.selectDate)
+                            isDatePickerPresented = true
+                        }
+                    )
+                }
+
+                if isAnyFilterActive {
+                    activeFilterSummary
+                }
+
                 PinnedEventsSection(model: model)
-                displayModePicker
-                filterGroup(title: "状態") {
-                    CalendarItemFilterBar(model: model)
-                }
-                filterGroup(title: "タグ", showsScrollHint: !model.availableTags.isEmpty) {
-                    if model.availableTags.isEmpty {
-                        EventTagEmptyState()
-                    } else {
-                        EventTagFilterBar(model: model)
-                    }
-                }
 
                 switch displayMode {
                 case .day:
-                    DateStrip(model: model)
                     AgendaSection(model: model)
                 case .upcoming:
                     UpcomingEventsSection(model: model)
                 }
             }
-            .padding(.top, 12)
+            .padding(.top, 8)
             .padding(.bottom, 36)
         }
         .scrollIndicators(.hidden)
@@ -206,43 +201,82 @@ struct KoyomiRootView: View {
         }
     }
 
-    private func filterGroup<Content: View>(
-        title: String,
-        showsScrollHint: Bool = false,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.caption.weight(.semibold))
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+
+            TextField("予定・タスクを検索", text: $model.searchText)
+                .focused($isSearchFocused)
+                .textInputAutocapitalization(.never)
+                .submitLabel(.search)
+
+            Button {
+                model.searchText = ""
+                isSearchFocused = false
+                isSearchPresented = false
+            } label: {
+                Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(.secondary)
-                Spacer()
-                if showsScrollHint {
-                    Label("横にスクロール", systemImage: "arrow.left.and.right")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                }
+                    .frame(width: 44, height: 44)
             }
-            .padding(.horizontal, 20)
-            content()
+            .accessibilityLabel("検索を終了")
         }
+        .padding(.leading, 14)
+        .padding(.trailing, 8)
+        .frame(minHeight: 44)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 20)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(title)フィルター")
+        .accessibilityIdentifier("calendar-search-field")
     }
 
-    private var displayModePicker: some View {
-        Picker("予定の表示", selection: $displayMode) {
-            ForEach(CalendarDisplayMode.allCases) { mode in
-                Text(mode.rawValue).tag(mode)
+    private var isAnyFilterActive: Bool {
+        model.itemFilter != .all || model.selectedTag != nil || model.isCalendarFilterActive
+    }
+
+    private var activeFilterSummary: some View {
+        HStack(spacing: 10) {
+            Label(activeFilterText, systemImage: "line.3.horizontal.decrease")
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            Button {
+                KoyomiHaptics.perform(.changeCalendarFilter)
+                model.selectItemFilter(.all)
+                model.selectTag(nil)
+                model.selectAllCalendars()
+            } label: {
+                Text("解除")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(.rect)
             }
+            .accessibilityLabel("すべての絞り込みを解除")
         }
-        .pickerStyle(.segmented)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal, 20)
-        .onChange(of: displayMode) { _, _ in
-            KoyomiHaptics.perform(.switchAgenda)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("active-filter-summary")
+    }
+
+    private var activeFilterText: String {
+        var labels: [String] = []
+        if model.itemFilter != .all {
+            labels.append(model.itemFilter.title)
         }
-        .accessibilityIdentifier("calendar-display-mode")
+        if let tag = model.selectedTag {
+            labels.append("#\(tag)")
+        }
+        if model.isCalendarFilterActive {
+            labels.append("カレンダー \(model.selectedCalendarIDs.count)/\(model.calendars.count)")
+        }
+        return labels.joined(separator: "、")
     }
 }
 

@@ -1,20 +1,53 @@
 import SwiftUI
 
+enum KoyomiResponsiveLayout {
+    static func usesVerticalCardLayout(for dynamicTypeSize: DynamicTypeSize) -> Bool {
+        dynamicTypeSize.isAccessibilitySize
+    }
+}
+
 struct DateStrip: View {
     @ObservedObject var model: CalendarViewModel
+    let onOpenCalendar: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(
-                model.selectedDate.formatted(
-                    .dateTime.year().month(.wide).locale(Locale(identifier: "ja_JP"))
-                )
-            )
-            .font(.headline)
-            .padding(.horizontal, 20)
-            .accessibilityIdentifier("month-title")
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Button(action: onOpenCalendar) {
+                    HStack(spacing: 5) {
+                        Text(monthTitle)
+                        .accessibilityIdentifier("month-title")
+                        Image(systemName: "chevron.down")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: 44)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("日付を選ぶ、\(monthTitle)")
+                .accessibilityHint("ダブルタップしてカレンダーを開く")
+                .accessibilityIdentifier("open-date-picker")
 
-            HStack(spacing: 4) {
+                Spacer()
+
+                if !Calendar.current.isDateInToday(model.selectedDate) {
+                    Button {
+                        KoyomiHaptics.perform(.selectDate)
+                        model.selectToday()
+                    } label: {
+                        Text("今日")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(.rect)
+                    }
+                    .accessibilityLabel("今日へ移動")
+                }
+            }
+            .padding(.horizontal, 20)
+
+            HStack(spacing: 2) {
                 ForEach(model.dateChoices, id: \.self) { date in
                     DateChip(
                         date: date,
@@ -32,6 +65,12 @@ struct DateStrip: View {
             .accessibilityIdentifier("date-strip")
         }
     }
+
+    private var monthTitle: String {
+        model.selectedDate.formatted(
+            .dateTime.year().month(.wide).locale(Locale(identifier: "ja_JP"))
+        )
+    }
 }
 
 private struct DateChip: View {
@@ -39,6 +78,7 @@ private struct DateChip: View {
     let isSelected: Bool
     let isToday: Bool
     let onSelect: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Button(action: onSelect) {
@@ -46,13 +86,20 @@ private struct DateChip: View {
                 Text(date.formatted(.dateTime.weekday(.narrow).locale(Locale(identifier: "ja_JP"))))
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.72))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text(date.formatted(.dateTime.day()))
                     .font(.headline.monospacedDigit())
+                    .lineLimit(1)
+                    .minimumScaleFactor(
+                        KoyomiResponsiveLayout.usesVerticalCardLayout(for: dynamicTypeSize) ? 0.6 : 0.85
+                    )
+                    .allowsTightening(true)
                 Circle()
                     .fill(isToday ? Color.accentColor : .clear)
                     .frame(width: 4, height: 4)
             }
-            .frame(maxWidth: .infinity, minHeight: 64)
+            .frame(maxWidth: .infinity, minHeight: 54)
             .contentShape(.rect)
         }
         .frame(maxWidth: .infinity)

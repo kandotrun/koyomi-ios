@@ -7,7 +7,7 @@ struct AgendaSection: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 Text(model.selectedDateTitle)
-                    .font(.title2.bold())
+                    .font(.title3.bold())
                 Spacer()
                 Text(model.agendaEvents.isEmpty ? "予定なし" : "\(model.agendaEvents.count)件")
                     .font(.caption.weight(.semibold))
@@ -38,6 +38,7 @@ struct AgendaSection: View {
                                 model.togglePin(event)
                             }
                         )
+                        .accessibilityIdentifier("agenda-event-\(event.eventIdentifier)")
                     }
                 }
             }
@@ -54,56 +55,27 @@ struct AgendaEventRow: View {
     let isPinned: Bool
     let onOpen: () -> Void
     let onTogglePin: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var tint: Color { Color(koyomiHex: event.calendarColorHex) }
     private var metadata: EventTitleMetadata { event.titleMetadata }
     private var showsCalendarName: Bool { !metadata.containsTag(event.calendarName) }
+    private var visibleTags: [String] {
+        metadata.tags.filter {
+            !(event.isEstimatedDateWindow
+                && EventTitleMetadata.normalize($0) == EventTitleMetadata.normalize("見込み"))
+        }
+    }
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .fill(tint)
                 .frame(width: 5)
                 .accessibilityHidden(true)
 
             Button(action: onOpen) {
-                HStack(spacing: 14) {
-                    Text(timeText)
-                        .font(.caption.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(.primary.opacity(0.7))
-                        .frame(width: 58, alignment: .leading)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(metadata.displayTitle)
-                            .font(.body.weight(.semibold))
-                            .strikethrough(event.isCompletedTask)
-                            .foregroundStyle(event.isCompletedTask ? .secondary : .primary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                        EventTagSummary(tags: metadata.tags)
-                        if let estimatedStatusText {
-                            Label(estimatedStatusText, systemImage: "calendar.badge.clock")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.purple)
-                        }
-                        if showsCalendarName || event.location != nil {
-                            HStack(spacing: 6) {
-                                if showsCalendarName {
-                                    Text(event.calendarName)
-                                }
-                                if let location = event.location {
-                                    Label(location, systemImage: "mappin")
-                                        .labelStyle(.titleAndIcon)
-                                        .lineLimit(1)
-                                }
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.primary.opacity(0.74))
-                        }
-                    }
-                    Spacer(minLength: 4)
-                }
+                eventContent
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
@@ -120,12 +92,66 @@ struct AgendaEventRow: View {
                     : "\(metadata.displayTitle)をピン留め"
             )
         }
-        .padding(14)
-        .frame(minHeight: 78)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
+        .padding(12)
+        .frame(minHeight: 72)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var eventContent: some View {
+        if KoyomiResponsiveLayout.usesVerticalCardLayout(for: dynamicTypeSize) {
+            VStack(alignment: .leading, spacing: 8) {
+                timeLabel
+                eventDetails
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(spacing: 12) {
+                timeLabel
+                    .frame(width: 52, alignment: .leading)
+                eventDetails
+                Spacer(minLength: 4)
+            }
+        }
+    }
+
+    private var timeLabel: some View {
+        Text(timeText)
+            .font(.caption.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.primary.opacity(0.7))
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var eventDetails: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(metadata.displayTitle)
+                .font(.body.weight(.semibold))
+                .strikethrough(event.isCompletedTask)
+                .foregroundStyle(event.isCompletedTask ? .secondary : .primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            EventTagSummary(tags: visibleTags)
+            if let estimatedStatusText {
+                Label(estimatedStatusText, systemImage: "calendar.badge.clock")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.purple)
+            }
+            if showsCalendarName || event.location != nil {
+                HStack(spacing: 6) {
+                    if showsCalendarName {
+                        Text(event.calendarName)
+                    }
+                    if let location = event.location {
+                        Label(location, systemImage: "mappin")
+                            .labelStyle(.titleAndIcon)
+                            .lineLimit(1)
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.primary.opacity(0.74))
+            }
         }
     }
 
@@ -134,11 +160,11 @@ struct AgendaEventRow: View {
         if event.isCompletedTask { return "完了済み" }
         return switch window.status(at: .now) {
         case let .upcoming(daysUntilStart):
-            "見込み期間まであと\(daysUntilStart)日"
+            "あと\(daysUntilStart)日"
         case let .withinWindow(daysUntilLatest):
-            "期間内・遅くともあと\(daysUntilLatest)日"
+            "遅くとも\(daysUntilLatest)日"
         case let .overdue(days):
-            "\(days)日超過・要確認"
+            "\(days)日超過"
         }
     }
 

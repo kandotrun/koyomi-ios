@@ -33,6 +33,93 @@ final class CountdownCalculatorTests: XCTestCase {
         XCTAssertEqual(presentation.targetDate, event.endDate)
     }
 
+    func testCompactUpcomingTextRoundsAwayDistractingSeconds() {
+        let event = makeEvent(
+            start: now.addingTimeInterval(11 * 3_600 + 56 * 60 + 38),
+            end: now.addingTimeInterval(13 * 3_600)
+        )
+
+        XCTAssertEqual(
+            CountdownCalculator.compactText(for: event, now: now),
+            "あと12時間"
+        )
+    }
+
+    func testCompactUpcomingTextChoosesADayMinuteOrImminentUnit() {
+        XCTAssertEqual(
+            CountdownCalculator.compactText(
+                for: makeEvent(
+                    start: now.addingTimeInterval(2 * 86_400 + 3 * 3_600),
+                    end: now.addingTimeInterval(3 * 86_400)
+                ),
+                now: now
+            ),
+            "あと2日"
+        )
+        XCTAssertEqual(
+            CountdownCalculator.compactText(
+                for: makeEvent(
+                    start: now.addingTimeInterval(36 * 60 + 1),
+                    end: now.addingTimeInterval(3_600)
+                ),
+                now: now
+            ),
+            "あと37分"
+        )
+        XCTAssertEqual(
+            CountdownCalculator.compactText(
+                for: makeEvent(
+                    start: now.addingTimeInterval(30),
+                    end: now.addingTimeInterval(60)
+                ),
+                now: now
+            ),
+            "まもなく"
+        )
+    }
+
+    func testCompactTextKeepsOngoingAndEndedMeaning() {
+        XCTAssertEqual(
+            CountdownCalculator.compactText(
+                for: makeEvent(
+                    start: now.addingTimeInterval(-60),
+                    end: now.addingTimeInterval(3_600 + 30 * 60)
+                ),
+                now: now
+            ),
+            "終了まで2時間"
+        )
+        XCTAssertEqual(
+            CountdownCalculator.compactText(
+                for: makeEvent(
+                    start: now.addingTimeInterval(-7_200),
+                    end: now.addingTimeInterval(-1)
+                ),
+                now: now
+            ),
+            "終了"
+        )
+    }
+
+    func testCompactEstimatedTextKeepsWindowMeaning() {
+        var upcoming = makeEvent(
+            start: now.addingTimeInterval(14 * 86_400),
+            end: now.addingTimeInterval(43 * 86_400)
+        )
+        upcoming.title = "指輪の刻印 #タスク #見込み"
+        upcoming.isAllDay = true
+        var ongoing = upcoming
+        ongoing.startDate = now.addingTimeInterval(-14 * 86_400)
+        ongoing.endDate = now.addingTimeInterval(15 * 86_400)
+        var overdue = upcoming
+        overdue.startDate = now.addingTimeInterval(-31 * 86_400)
+        overdue.endDate = now.addingTimeInterval(-2 * 86_400)
+
+        XCTAssertEqual(CountdownCalculator.compactText(for: upcoming, now: now), "見込みまで14日")
+        XCTAssertEqual(CountdownCalculator.compactText(for: ongoing, now: now), "遅くとも14日")
+        XCTAssertEqual(CountdownCalculator.compactText(for: overdue, now: now), "3日超過")
+    }
+
     func testEndedEventDoesNotShowADecreasingTimer() {
         let event = makeEvent(
             start: now.addingTimeInterval(-7_200),

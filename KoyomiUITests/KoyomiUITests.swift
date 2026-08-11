@@ -19,21 +19,107 @@ final class KoyomiUITests: XCTestCase {
         XCTAssertTrue(app.buttons["歯科検診をピン留め"].exists, "pin action")
     }
 
+    func testDayViewKeepsAgendaVisibleWithoutScrolling() {
+        let app = launchDemo()
+        let dentist = app.staticTexts["歯科検診"]
+
+        XCTAssertTrue(dentist.waitForExistence(timeout: 5))
+        XCTAssertTrue(dentist.isHittable, "the selected day's agenda should be in the first viewport")
+    }
+
+    func testSecondaryFiltersLiveInDisplayOptionsSheet() {
+        let app = launchDemo()
+
+        XCTAssertFalse(app.descendants(matching: .any)["calendar-item-filter"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["event-tag-filter"].exists)
+
+        let options = app.buttons["display-options"]
+        XCTAssertTrue(options.waitForExistence(timeout: 5))
+        options.tap()
+
+        XCTAssertTrue(app.buttons["item-filter-openTasks"].waitForExistence(timeout: 2))
+        XCTAssertTrue(scrollToExistence(app.buttons["event-tag-filter-タスク"], in: app))
+        XCTAssertTrue(scrollToExistence(app.buttons["calendar-toggle-demo-personal"], in: app))
+    }
+
+    func testPinnedEventsStartCompactAndExpandOnDemand() {
+        let app = launchDemo()
+        let summary = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "pin-summary-")
+        ).firstMatch
+
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "pin-card-")).count,
+            0
+        )
+
+        app.buttons["pinned-section-toggle"].tap()
+        let card = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "pin-card-")
+        ).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 2))
+        XCTAssertTrue(
+            card.label.contains("あと"),
+            "expanded pin must announce its countdown; label=\(card.label)"
+        )
+    }
+
+    func testCompactControlsKeepMinimumTouchTargetsAndStateLabels() {
+        let app = launchDemo()
+
+        let pinToggle = app.buttons["pinned-section-toggle"]
+        XCTAssertTrue(pinToggle.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(pinToggle.frame.height, 44)
+
+        let datePicker = app.buttons["open-date-picker"]
+        XCTAssertGreaterThanOrEqual(datePicker.frame.height, 44)
+        XCTAssertTrue(datePicker.label.contains("令和8年8月"), "date picker must announce visible state")
+
+        let tomorrow = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS %@", "8月13日")
+        ).firstMatch
+        XCTAssertTrue(tomorrow.waitForExistence(timeout: 2))
+        tomorrow.tap()
+        let today = app.buttons["今日へ移動"]
+        XCTAssertTrue(today.waitForExistence(timeout: 2))
+        XCTAssertGreaterThanOrEqual(today.frame.height, 44)
+
+        app.buttons["show-calendar-search"].tap()
+        let closeSearch = app.buttons["検索を終了"]
+        XCTAssertTrue(closeSearch.waitForExistence(timeout: 2))
+        XCTAssertGreaterThanOrEqual(closeSearch.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(closeSearch.frame.height, 44)
+    }
+
+    func testSearchAppearsOnlyWhenRequested() {
+        let app = launchDemo()
+
+        XCTAssertFalse(app.textFields["予定・タスクを検索"].exists)
+        let searchButton = app.buttons["show-calendar-search"]
+        XCTAssertTrue(searchButton.waitForExistence(timeout: 5))
+        searchButton.tap()
+        XCTAssertTrue(app.textFields["予定・タスクを検索"].waitForExistence(timeout: 2))
+    }
+
     func testTagFilterShowsCleanTitlesAndNarrowsTheAgenda() {
         let app = launchDemo()
 
-        let tagFilter = app.descendants(matching: .any)["event-tag-filter"]
-        XCTAssertTrue(tagFilter.waitForExistence(timeout: 5), "tag filter")
         XCTAssertTrue(app.staticTexts["集中作業"].exists, "clean event title")
         XCTAssertFalse(app.staticTexts["集中作業 #仕事 #タスク"].exists, "raw tagged title must not leak into UI")
         XCTAssertTrue(app.descendants(matching: .any)["event-tag-chip-タスク"].exists, "tag chip")
 
+        app.buttons["display-options"].tap()
         let taskFilter = app.buttons["event-tag-filter-タスク"]
-        XCTAssertTrue(taskFilter.exists)
+        XCTAssertTrue(scrollToExistence(taskFilter, in: app))
         taskFilter.tap()
+        app.buttons["完了"].tap()
 
         XCTAssertTrue(app.staticTexts["集中作業"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["歯科検診"].waitForNonExistence(timeout: 2))
+        let resetFilters = app.buttons["すべての絞り込みを解除"]
+        XCTAssertTrue(resetFilters.waitForExistence(timeout: 2))
+        XCTAssertGreaterThanOrEqual(resetFilters.frame.height, 44)
         attachScreenshot(of: app, name: "Task tag filter")
     }
 
@@ -48,31 +134,47 @@ final class KoyomiUITests: XCTestCase {
 
         pinButton.tap()
 
-        XCTAssertTrue(app.buttons["歯科検診のピン留めを解除"].waitForExistence(timeout: 5))
+        app.buttons["pinned-section-toggle"].tap()
+        let remove = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                "pin-remove-",
+                "歯科検診"
+            )
+        ).firstMatch
+        XCTAssertTrue(remove.waitForExistence(timeout: 5))
+        remove.tap()
+        XCTAssertTrue(remove.waitForNonExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["プロジェクト発表"].exists, "removing one pin must keep the other pin")
     }
 
     func testCalendarFilterCanHideOneDeviceCalendar() {
         let app = launchDemo()
-        let filterButton = app.buttons["表示するカレンダーを選ぶ"]
+        let filterButton = app.buttons["display-options"]
         XCTAssertTrue(filterButton.waitForExistence(timeout: 5))
 
         filterButton.tap()
         let personalCalendar = app.buttons["calendar-toggle-demo-personal"]
-        XCTAssertTrue(personalCalendar.waitForExistence(timeout: 2))
+        XCTAssertTrue(scrollToExistence(personalCalendar, in: app))
+        XCTAssertTrue(personalCalendar.isSelected)
         attachScreenshot(of: app, name: "Calendar filter")
         personalCalendar.tap()
+        XCTAssertFalse(personalCalendar.isSelected)
         app.buttons["完了"].tap()
 
         XCTAssertTrue(app.staticTexts["歯科検診"].waitForNonExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["集中作業"].waitForNonExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["カレンダー 1/2"].waitForExistence(timeout: 2))
     }
 
     func testUpcomingViewShowsFutureEventsGroupedByDate() {
         let app = launchDemo()
+        app.buttons["display-options"].tap()
         let upcomingButton = app.segmentedControls.buttons["予定一覧"]
         XCTAssertTrue(upcomingButton.waitForExistence(timeout: 5))
 
         upcomingButton.tap()
+        app.buttons["完了"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["upcoming-list"].waitForExistence(timeout: 2))
         let travelEvent = app.descendants(matching: .any)["upcoming-event-demo-travel"]
@@ -109,6 +211,7 @@ final class KoyomiUITests: XCTestCase {
         title.typeText("特注指輪の刻印を確認")
         app.buttons["save-calendar-item"].tap()
 
+        app.buttons["pinned-section-toggle"].tap()
         let created = app.buttons.matching(
             NSPredicate(
                 format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
@@ -205,14 +308,20 @@ final class KoyomiUITests: XCTestCase {
 
     func testFiltersOpenTasksAndSearchesCalendarContent() {
         let app = launchDemo()
+        app.buttons["display-options"].tap()
         let openTasks = app.buttons["item-filter-openTasks"]
         XCTAssertTrue(openTasks.waitForExistence(timeout: 5))
         openTasks.tap()
+        XCTAssertTrue(openTasks.isSelected)
+        app.buttons["完了"].tap()
         XCTAssertTrue(app.staticTexts["集中作業"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["歯科検診"].waitForNonExistence(timeout: 2))
 
+        app.buttons["display-options"].tap()
         app.buttons["item-filter-all"].tap()
-        let search = app.searchFields["予定・タスクを検索"]
+        app.buttons["完了"].tap()
+        app.buttons["show-calendar-search"].tap()
+        let search = app.textFields["予定・タスクを検索"]
         XCTAssertTrue(search.waitForExistence(timeout: 2))
         search.tap()
         search.typeText("歯科")

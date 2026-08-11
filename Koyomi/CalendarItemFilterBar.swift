@@ -52,7 +52,7 @@ struct CalendarItemFilterBar: View {
     }
 }
 
-private extension CalendarItemFilter {
+extension CalendarItemFilter {
     var title: String {
         switch self {
         case .all: "すべて"
