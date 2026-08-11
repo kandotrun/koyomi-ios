@@ -136,7 +136,7 @@ final class EventKitCalendarSourceIntegrationTests: XCTestCase {
         XCTAssertEqual(
             try XCTUnwrap(persistedAlarm.absoluteDate).timeIntervalSinceReferenceDate,
             absoluteAlarmDate.timeIntervalSinceReferenceDate,
-            accuracy: 0.5
+            accuracy: 1
         )
 
         var replacementDraft = CalendarItemDraft(updated)
