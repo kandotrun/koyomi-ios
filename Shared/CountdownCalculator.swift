@@ -62,6 +62,40 @@ public enum CountdownCalculator {
         )
     }
 
+    public static func compactText(for event: PinnedEvent, now: Date = .now) -> String {
+        let presentation = presentation(for: event, now: now)
+
+        if event.isEstimatedDateWindow {
+            return switch presentation.phase {
+            case .upcoming:
+                "見込みまで\(presentation.value)"
+            case .ongoing:
+                "遅くとも\(presentation.value)"
+            case .overdue:
+                "\(presentation.value)超過"
+            case .ended:
+                presentation.value
+            }
+        }
+
+        switch presentation.phase {
+        case .upcoming:
+            guard let targetDate = presentation.targetDate,
+                  let duration = compactDuration(targetDate.timeIntervalSince(now))
+            else { return "まもなく" }
+            return "あと\(duration)"
+        case .ongoing:
+            guard let targetDate = presentation.targetDate,
+                  let duration = compactDuration(targetDate.timeIntervalSince(now))
+            else { return "まもなく終了" }
+            return "終了まで\(duration)"
+        case .overdue:
+            return "\(presentation.value)超過"
+        case .ended:
+            return presentation.value
+        }
+    }
+
     private static func estimatedPresentation(
         for event: PinnedEvent,
         now: Date,
@@ -91,6 +125,20 @@ public enum CountdownCalculator {
                 targetDate: nil
             )
         }
+    }
+
+    private static func compactDuration(_ interval: TimeInterval) -> String? {
+        let seconds = max(0, interval)
+        if seconds >= 86_400 {
+            return "\(max(1, Int(seconds / 86_400)))日"
+        }
+        if seconds >= 3_600 {
+            return "\(max(1, Int(ceil(seconds / 3_600))))時間"
+        }
+        if seconds >= 60 {
+            return "\(max(1, Int(ceil(seconds / 60))))分"
+        }
+        return nil
     }
 
     private static func format(_ interval: TimeInterval) -> String {

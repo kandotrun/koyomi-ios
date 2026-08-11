@@ -4,6 +4,37 @@ import XCTest
 
 @MainActor
 final class CalendarManagementViewModelTests: XCTestCase {
+    func testAccessibilityDynamicTypeUsesVerticalCardLayout() {
+        XCTAssertFalse(KoyomiResponsiveLayout.usesVerticalCardLayout(for: .large))
+        XCTAssertTrue(KoyomiResponsiveLayout.usesVerticalCardLayout(for: .accessibility1))
+        XCTAssertTrue(KoyomiResponsiveLayout.usesVerticalCardLayout(for: .accessibility5))
+    }
+
+    func testPinnedSectionTimelineSwitchesAtTheNextLifecycleBoundary() {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+        let ongoing = pinnedEvent(
+            id: "ongoing",
+            start: now.addingTimeInterval(-60),
+            end: now.addingTimeInterval(10)
+        )
+        let upcoming = pinnedEvent(
+            id: "upcoming",
+            start: now.addingTimeInterval(20),
+            end: now.addingTimeInterval(80)
+        )
+        let pins = [ongoing, upcoming]
+
+        XCTAssertEqual(KoyomiPinnedTimeline.nextBoundary(in: pins, after: now), ongoing.endDate)
+        XCTAssertEqual(KoyomiPinnedTimeline.visiblePins(from: pins, at: now).first?.id, ongoing.id)
+        XCTAssertEqual(
+            KoyomiPinnedTimeline.visiblePins(
+                from: pins,
+                at: ongoing.endDate.addingTimeInterval(0.001)
+            ).first?.id,
+            upcoming.id
+        )
+    }
+
     func testCreatesTaskAndRefreshesAgenda() throws {
         let fixture = try makeFixture(events: [])
         let start = fixture.now.addingTimeInterval(3_600)
@@ -123,7 +154,7 @@ final class CalendarManagementViewModelTests: XCTestCase {
         fixture.model.searchText = "一致しない検索"
         fixture.model.selectItemFilter(.events)
 
-        let start = Date().addingTimeInterval(172_800)
+        let start = fixture.now.addingTimeInterval(172_800)
         let draft = CalendarItemDraft(
             kind: .task,
             readableTitle: "表示される新規タスク",
@@ -200,6 +231,21 @@ final class CalendarManagementViewModelTests: XCTestCase {
         XCTAssertNotNil(updated)
         XCTAssertTrue(updated?.isCompletedTask == true)
         XCTAssertTrue(model.errorMessage?.contains("更新しましたが") == true)
+    }
+
+    private func pinnedEvent(id: String, start: Date, end: Date) -> PinnedEvent {
+        PinnedEvent(
+            id: id,
+            eventIdentifier: id,
+            externalIdentifier: nil,
+            title: id,
+            startDate: start,
+            endDate: end,
+            isAllDay: false,
+            calendarName: "仕事",
+            calendarColorHex: "007AFF",
+            location: nil
+        )
     }
 
     private func makeFixture(
