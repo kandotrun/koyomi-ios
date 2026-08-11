@@ -249,7 +249,10 @@ final class EventKitCalendarSourceIntegrationTests: XCTestCase {
         try store.saveCalendar(calendar, commit: true)
         defer { try? store.removeCalendar(calendar, commit: true) }
 
-        let start = Date().addingTimeInterval(86_400)
+        let dateCalendar = Calendar(identifier: .gregorian)
+        let start = try XCTUnwrap(
+            dateCalendar.date(from: DateComponents(year: 2026, month: 9, day: 8, hour: 10))
+        )
         let rawEvent = EKEvent(eventStore: store)
         rawEvent.calendar = calendar
         rawEvent.title = "第2火曜の定例"
@@ -293,7 +296,7 @@ final class EventKitCalendarSourceIntegrationTests: XCTestCase {
             occurrenceCount: draft.recurrence?.occurrenceCount
         )
 
-        let updated = try source.updateItem(loaded, with: draft, scope: .thisEvent)
+        let updated = try source.updateItem(loaded, with: draft, scope: .futureEvents)
         let persisted = try XCTUnwrap(store.event(withIdentifier: updated.eventIdentifier))
         let persistedRule = try XCTUnwrap(persisted.recurrenceRules?.first)
         let persistedDay = try XCTUnwrap(persistedRule.daysOfTheWeek?.first)
