@@ -151,6 +151,7 @@ struct PinnedEventsSection: View {
                 .padding(.vertical, 4)
             }
             .scrollIndicators(.hidden)
+            .accessibilityIdentifier("pinned-cards-scroll")
         }
     }
 }

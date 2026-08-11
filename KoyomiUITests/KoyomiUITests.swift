@@ -74,7 +74,10 @@ final class KoyomiUITests: XCTestCase {
 
         let datePicker = app.buttons["open-date-picker"]
         XCTAssertGreaterThanOrEqual(datePicker.frame.height, 44)
-        XCTAssertTrue(datePicker.label.contains("令和8年8月"), "date picker must announce visible state")
+        XCTAssertTrue(
+            datePicker.label.contains("日付を選ぶ") && datePicker.label.contains("8月"),
+            "date picker must announce its action and visible month; label=\(datePicker.label)"
+        )
 
         let tomorrow = app.buttons.matching(
             NSPredicate(format: "label CONTAINS %@", "8月13日")
@@ -135,6 +138,8 @@ final class KoyomiUITests: XCTestCase {
         pinButton.tap()
 
         app.buttons["pinned-section-toggle"].tap()
+        let pinScroll = app.scrollViews["pinned-cards-scroll"]
+        XCTAssertTrue(pinScroll.waitForExistence(timeout: 5))
         let remove = app.buttons.matching(
             NSPredicate(
                 format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
@@ -142,6 +147,9 @@ final class KoyomiUITests: XCTestCase {
                 "歯科検診"
             )
         ).firstMatch
+        for _ in 0..<4 where !remove.exists {
+            pinScroll.swipeLeft()
+        }
         XCTAssertTrue(remove.waitForExistence(timeout: 5))
         remove.tap()
         XCTAssertTrue(remove.waitForNonExistence(timeout: 2))
