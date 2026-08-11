@@ -104,8 +104,10 @@ jobs:
             | xcbeautify
       - name: Capture demo screenshot
         run: |
+          APP_PATH="DerivedData-Build/Build/Products/Debug-iphonesimulator/Koyomi.app"
           xcrun simctl boot "${{ steps.simulator.outputs.id }}" 2>/dev/null || true
           xcrun simctl bootstatus "${{ steps.simulator.outputs.id }}" -b
+          xcrun simctl install "${{ steps.simulator.outputs.id }}" "$APP_PATH"
           xcrun simctl status_bar "${{ steps.simulator.outputs.id }}" override --time "9:41" --batteryState charged --batteryLevel 100
           xcrun simctl launch --terminate-running-process "${{ steps.simulator.outputs.id }}" run.kan.koyomi -ui-testing
           sleep 2
