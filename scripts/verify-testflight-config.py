@@ -13,6 +13,7 @@ APP_ID = "run.kan.koyomi"
 WIDGET_ID = "run.kan.koyomi.widget"
 KEYCHAIN_ACCESS_GROUP = "$(AppIdentifierPrefix)run.kan.koyomi.shared"
 SIGNED_KEYCHAIN_ACCESS_GROUP = f"{TEAM_ID}.run.kan.koyomi.shared"
+SUPPORTED_INTERFACE_ORIENTATIONS = ["UIInterfaceOrientationPortrait"]
 
 
 def load_plist(relative_path: str) -> dict:
@@ -33,6 +34,9 @@ def main() -> None:
     require_yaml_setting(project, "CURRENT_PROJECT_VERSION", "2")
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", APP_ID)
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", WIDGET_ID)
+    assert project.count('TARGETED_DEVICE_FAMILY: "1"') == 4, (
+        "every generated target must be iPhone-only"
+    )
 
     assert project.count("path: Resources/PrivacyInfo.xcprivacy") == 2, (
         "PrivacyInfo.xcprivacy must be embedded in the app and widget"
@@ -52,6 +56,9 @@ def main() -> None:
     app_info = load_plist("Koyomi/Info.plist")
     assert app_info.get("ITSAppUsesNonExemptEncryption") is False, (
         "Koyomi/Info.plist must declare no non-exempt encryption"
+    )
+    assert app_info.get("UISupportedInterfaceOrientations") == SUPPORTED_INTERFACE_ORIENTATIONS, (
+        "Koyomi/Info.plist must declare the supported iPhone orientation"
     )
 
     app_entitlements = load_plist("Koyomi/Koyomi.entitlements")
