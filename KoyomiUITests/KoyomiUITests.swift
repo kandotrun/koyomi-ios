@@ -95,7 +95,13 @@ final class KoyomiUITests: XCTestCase {
 
         let title = app.textFields["calendar-item-title"]
         XCTAssertTrue(title.waitForExistence(timeout: 2))
-        XCTAssertTrue(app.datePickers["calendar-item-estimated-center"].exists)
+        let centerDatePicker = app.datePickers["calendar-item-estimated-center"]
+        XCTAssertTrue(centerDatePicker.exists)
+        let allVisibleElements = app.descendants(matching: .any)
+        XCTAssertEqual(
+            allVisibleElements.matching(NSPredicate(format: "label CONTAINS %@", "Reiwa")).count,
+            0
+        )
         XCTAssertTrue(app.steppers["calendar-item-estimated-buffer"].exists)
         XCTAssertTrue(app.staticTexts["目安日の前後：各2週間"].exists)
         attachScreenshot(of: app, name: "Estimated task editor")
@@ -104,7 +110,11 @@ final class KoyomiUITests: XCTestCase {
         app.buttons["save-calendar-item"].tap()
 
         let created = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS %@", "特注指輪の刻印を確認")
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                "pin-card-",
+                "特注指輪の刻印を確認"
+            )
         ).firstMatch
         XCTAssertTrue(created.waitForExistence(timeout: 3))
         created.tap()

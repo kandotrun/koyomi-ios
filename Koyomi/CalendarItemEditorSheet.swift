@@ -120,7 +120,7 @@ struct CalendarItemEditorSheet: View {
                     }
                     .pickerStyle(.segmented)
 
-                    TextField("タイトル", text: $draft.readableTitle)
+                    TextField("タイトル（必須）", text: $draft.readableTitle)
                         .textInputAutocapitalization(.sentences)
                         .accessibilityIdentifier("calendar-item-title")
 
@@ -153,7 +153,7 @@ struct CalendarItemEditorSheet: View {
                             systemImage: "calendar.badge.clock"
                         )
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.72))
 
                         DatePicker(
                             "目安日",
@@ -325,6 +325,8 @@ struct CalendarItemEditorSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(KoyomiBackdrop())
+            .environment(\.locale, Locale(identifier: "ja_JP"))
+            .environment(\.calendar, editorDisplayCalendar)
             .navigationTitle(context.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -503,6 +505,13 @@ struct CalendarItemEditorSheet: View {
             ? Calendar.current.startOfDay(for: draft.startDate)
             : draft.startDate
         return minimum...Date.distantFuture
+    }
+
+    private var editorDisplayCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "ja_JP")
+        calendar.timeZone = Calendar.current.timeZone
+        return calendar
     }
 
     private var isDuplicatingUnsupportedRecurrence: Bool {

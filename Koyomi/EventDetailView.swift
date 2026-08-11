@@ -68,7 +68,7 @@ struct EventDetailView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.glassProminent)
-                            .tint(.green)
+                            .tint(Color(red: 0, green: 0.38, blue: 0.18))
                             .disabled(!event.canEdit)
                             .accessibilityIdentifier("task-completion-button")
                         }
@@ -83,7 +83,7 @@ struct EventDetailView: View {
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.glass)
-                        .tint(.secondary)
+                        .tint(.primary)
                     } else {
                         Button {
                             KoyomiHaptics.perform(.togglePin)
