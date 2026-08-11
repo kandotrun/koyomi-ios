@@ -31,11 +31,14 @@ def require_yaml_setting(project: str, key: str, expected: str) -> None:
 
 
 def pbx_object(project: str, object_id: str) -> str:
-    header = re.search(
-        rf"(?m)^\s*{re.escape(object_id)} /\* [^\n]+ \*/ = \{{",
-        project,
+    headers = list(
+        re.finditer(
+            rf"(?m)^\s*{re.escape(object_id)} /\* [^\n]+ \*/ = \{{",
+            project,
+        )
     )
-    assert header, f"missing PBX object {object_id}"
+    assert len(headers) == 1, f"PBX object {object_id} must exist exactly once"
+    header = headers[0]
 
     brace_start = project.find("{", header.start(), header.end())
     depth = 0
@@ -64,14 +67,29 @@ def pbx_object(project: str, object_id: str) -> str:
 
 
 def require_generated_build_number(project: str, expected: str) -> None:
-    configuration_list = re.search(
-        r'(?m)^\s*buildConfigurationList = ([A-F0-9]+) '
-        r'/\* Build configuration list for PBXProject "[^"]+" \*/;$',
+    root_objects = re.findall(
+        r"(?m)^\s*rootObject = ([A-F0-9]+) /\* Project object \*/;$",
         project,
     )
-    assert configuration_list, "missing PBXProject build configuration list"
+    assert len(root_objects) == 1, "the Xcode project must define exactly one root object"
+    project_object = pbx_object(project, root_objects[0])
+    assert re.search(r"(?m)^\s*isa = PBXProject;$", project_object), (
+        "root object must be a PBXProject"
+    )
 
-    configuration_list_object = pbx_object(project, configuration_list.group(1))
+    configuration_lists = re.findall(
+        r'(?m)^\s*buildConfigurationList = ([A-F0-9]+) '
+        r'/\* Build configuration list for PBXProject "[^"]+" \*/;$',
+        project_object,
+    )
+    assert len(configuration_lists) == 1, (
+        "PBXProject must define exactly one build configuration list"
+    )
+
+    configuration_list_object = pbx_object(project, configuration_lists[0])
+    assert re.search(r"(?m)^\s*isa = XCConfigurationList;$", configuration_list_object), (
+        "PBXProject build configuration list must be an XCConfigurationList"
+    )
     configurations = re.findall(
         r"(?m)^\s*([A-F0-9]+) /\* (Debug|Release) \*/,$",
         configuration_list_object,
@@ -85,6 +103,13 @@ def require_generated_build_number(project: str, expected: str) -> None:
 
     for configuration_id, configuration_name in configurations:
         configuration = pbx_object(project, configuration_id)
+        assert re.search(r"(?m)^\s*isa = XCBuildConfiguration;$", configuration), (
+            f"{configuration_name} must reference an XCBuildConfiguration"
+        )
+        assert re.search(
+            rf"(?m)^\s*name = {re.escape(configuration_name)};$",
+            configuration,
+        ), f"{configuration_name} configuration name must match its reference"
         version = re.search(
             r"(?m)^\s*CURRENT_PROJECT_VERSION = ([^;]+);$",
             configuration,
