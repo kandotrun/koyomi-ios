@@ -6,6 +6,28 @@ protocol CalendarEventSource: AnyObject {
     var availableCalendars: [CalendarDescriptor] { get }
     func requestFullAccess() async throws -> Bool
     func events(in interval: DateInterval, calendarIDs: Set<String>) throws -> [CalendarEvent]
+    func createItem(_ draft: CalendarItemDraft) throws -> CalendarEvent
+    func updateItem(
+        _ event: CalendarEvent,
+        with draft: CalendarItemDraft,
+        scope: CalendarMutationScope
+    ) throws -> CalendarEvent
+    func setTaskCompletion(
+        _ event: CalendarEvent,
+        completed: Bool,
+        scope: CalendarMutationScope
+    ) throws -> CalendarEvent
+    func deleteItem(_ event: CalendarEvent, scope: CalendarMutationScope) throws
+}
+
+enum CalendarEventSourceError: Error, Equatable {
+    case invalidDraft
+    case readOnlyCalendar
+    case notFound
+    case ambiguousMatch
+    case conflict
+    case futureScopeUnavailable
+    case unsupported
 }
 
 enum CalendarAccessStatus: Equatable {

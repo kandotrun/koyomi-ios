@@ -3,17 +3,25 @@
 ![Core tests](https://github.com/kandotrun/koyomi-ios/actions/workflows/core-tests.yml/badge.svg)
 ![iOS app](https://github.com/kandotrun/koyomi-ios/actions/workflows/ios.yml/badge.svg)
 
-予定を眺めるための、iOS 26以降向け個人カレンダービューアです。
-大切な予定をピン留めし、開始・終了までをアプリとホーム／ロック画面ウィジェットで確認できます。
+予定とタスクをひとつの時間軸で管理する、iOS 26以降向け個人カレンダーアプリです。
+作成・編集・完了・複製・削除から、大切な予定のピン留めとカウントダウンまでをアプリ内で完結できます。
 
 ![Koyomi home screen](docs/koyomi-home.png)
 
 ## できること
 
-- EventKitでiPhoneに登録済みのカレンダーを閲覧
+- EventKitでiPhoneに登録済みのカレンダーを表示・管理
+- 予定／タスクの作成、編集、複製、削除
+- 日時・終日・保存先Calendar・場所・メモ・複数通知・繰り返しの設定
+- 日付未確定のタスクを「目安日＋前後の幅」で登録。EventKitでは最早日〜最遅日の終日帯と`#見込み`で保持
+- 見込みタスクは作成時に自動ピン留めし、期間前／期間内／期限超過を日単位で表示
+- `#タスク`を完了／未完了に切り替え、直後ならUndo
+- 再発予定は「この予定のみ」「これ以降すべて」を明示して変更
+- 読み取り専用Calendar、競合、曖昧な予定照合は変更せずfail closed
+- タイトル・タグ・Calendar・場所・メモの検索と、予定／見込み／未完了／完了済みフィルター
 - 終日・時間指定・日をまたぐ予定を日付ごとに表示
 - 予定のピン留め／解除
-- ピン留めを画面上部に常設し、開始前は「あと」、進行中は「終了まで」を秒単位で表示
+- ピン留めを画面上部に常設。通常予定は秒単位、見込みタスクは日単位で期間前／期間内／超過を表示
 - 複数ピンを横スクロールで確認
 - 日付ストリップ、グラフィカル日付選択、今日へ移動、プル更新
 - Small / Medium / Largeホーム画面ウィジェット（Largeは最大7件）
@@ -36,7 +44,7 @@ ClinicalAI 定例 #仕事 #ClinicalAI
 あとで調べる：音声UI #メモ #AI
 ```
 
-アプリ内にAI SDKやGoogle認証情報は入れません。Hermes Agentはユーザーの明示指示と確認に基づいてGoogle Calendar側を操作し、KoyomiはiPhoneのEventKit同期結果を表示します。詳しい記法と安全境界は[`docs/calendar-title-tags.md`](docs/calendar-title-tags.md)を参照してください。
+アプリ内にAI SDKやGoogle認証情報は入れません。Koyomi自身の変更はEventKit経由で同期先Calendarへ保存します。Hermes Agentもユーザーの明示指示に基づいてGoogle Calendar側を操作でき、両者は同じCalendarタイトルと`#タグ`規約を共有します。詳しい記法と安全境界は[`docs/calendar-title-tags.md`](docs/calendar-title-tags.md)を参照してください。
 
 ## データとプライバシー
 
@@ -45,7 +53,7 @@ ClinicalAI 定例 #仕事 #ClinicalAI
 - 共有Keychainに保存するのは、ユーザーがピン留めした予定の表示用スナップショットだけです。
 - スナップショットにはタイトル、開始・終了、終日フラグ、カレンダー名・色、場所を含みます。メモ、参加者、URL、アラームは保存しません。
 - Widget extensionはEventKitへ直接アクセスせず、共有スナップショットだけを読みます。
-- カレンダー権限は初回画面のボタンを押したときに要求します。拒否・制限・書き込み専用の各状態には個別の案内があります。
+- カレンダー権限は初回画面のボタンを押したときに要求します。Full Access時だけ管理機能を有効化し、拒否・制限・書き込み専用の各状態には個別の案内があります。
 
 ## 必要環境
 
@@ -70,7 +78,7 @@ open Koyomi.xcodeproj
 swift test
 ```
 
-CIはGitHub-hosted `macos-26` / Xcode 26.6で、Swift Packageのユニットテスト、iOS Simulatorビルド、UIテスト、デモ画面のスクリーンショット取得まで実行します。
+CIはGitHub-hosted `macos-26` / Xcode 26.6で、Swift Packageのユニットテスト、App unit test、iOS Simulator上の一時Calendarを使うEventKit round-trip、UIテスト、Simulatorビルドを実行します。
 
 ## 実機署名
 
@@ -89,6 +97,7 @@ CIはGitHub-hosted `macos-26` / Xcode 26.6で、Swift Packageのユニットテ�
 - `Koyomi/` — EventKitアダプター、状態管理、Liquid Glass UI
 - `KoyomiWidget/` — 共有Keychainのピンを読むWidgetKit extension
 - `KoyomiTests/` — Foundation中心のユニットテスト
+- `KoyomiAppTests/` — ViewModelと実EventKitのApp unit / integration test
 - `KoyomiUITests/` — 権限不要のデモデータを使うUIテスト
 
 WidgetKitのタイムライン更新時刻はシステムが最終決定します。表示中のカウントダウン自体はSwiftUIのタイマーテキストで進み、開始・終了境界ではタイムライン更新を要求します。

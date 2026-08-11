@@ -70,6 +70,17 @@
       <Testables>
          <TestableReference
             skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "2D94AA2A2B2E3CBB6AFCE778"
+               BuildableName = "KoyomiAppTests.xctest"
+               BlueprintName = "KoyomiAppTests"
+               ReferencedContainer = "container:Koyomi.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"

@@ -5,12 +5,20 @@ public struct CalendarDescriptor: Codable, Equatable, Hashable, Identifiable, Se
     public let title: String
     public let sourceName: String
     public let colorHex: String
+    public let allowsContentModifications: Bool
 
-    public init(id: String, title: String, sourceName: String, colorHex: String) {
+    public init(
+        id: String,
+        title: String,
+        sourceName: String,
+        colorHex: String,
+        allowsContentModifications: Bool = false
+    ) {
         self.id = id
         self.title = title
         self.sourceName = sourceName
         self.colorHex = colorHex
+        self.allowsContentModifications = allowsContentModifications
     }
 }
 

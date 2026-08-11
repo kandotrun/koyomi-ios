@@ -77,9 +77,16 @@ struct AgendaEventRow: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(metadata.displayTitle)
                             .font(.body.weight(.semibold))
+                            .strikethrough(event.isCompletedTask)
+                            .foregroundStyle(event.isCompletedTask ? .secondary : .primary)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                         EventTagSummary(tags: metadata.tags)
+                        if let estimatedStatusText {
+                            Label(estimatedStatusText, systemImage: "calendar.badge.clock")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.purple)
+                        }
                         if showsCalendarName || event.location != nil {
                             HStack(spacing: 6) {
                                 if showsCalendarName {
@@ -122,7 +129,21 @@ struct AgendaEventRow: View {
         }
     }
 
+    private var estimatedStatusText: String? {
+        guard let window = CalendarEstimatedWindow(event: event) else { return nil }
+        if event.isCompletedTask { return "完了済み" }
+        return switch window.status(at: .now) {
+        case let .upcoming(daysUntilStart):
+            "見込み期間まであと\(daysUntilStart)日"
+        case let .withinWindow(daysUntilLatest):
+            "期間内・遅くともあと\(daysUntilLatest)日"
+        case let .overdue(days):
+            "\(days)日超過・要確認"
+        }
+    }
+
     private var timeText: String {
+        if event.isEstimatedDateWindow { return "見込み" }
         if event.isAllDay { return "終日" }
         return event.startDate.formatted(
             .dateTime.hour().minute().locale(Locale(identifier: "ja_JP"))

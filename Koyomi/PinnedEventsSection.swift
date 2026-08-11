@@ -79,6 +79,12 @@ private struct PinnedCountdownCard: View {
                     }
                     Text(metadata.displayTitle)
                         .font(.title3.bold())
+                        .strikethrough(metadata.containsTag("タスク") && metadata.containsTag("完了"))
+                        .foregroundStyle(
+                            metadata.containsTag("タスク") && metadata.containsTag("完了")
+                                ? .secondary
+                                : .primary
+                        )
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     EventTagSummary(tags: metadata.tags)
@@ -92,22 +98,18 @@ private struct PinnedCountdownCard: View {
                 .accessibilityLabel("\(metadata.displayTitle)のピン留めを解除")
             }
 
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                let presentation = CountdownCalculator.presentation(for: pin, now: context.date)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(presentation.label)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.primary.opacity(0.68))
-                    Text(presentation.value)
-                        .font(.system(.title2, design: .rounded, weight: .bold))
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                        .accessibilityLabel("\(presentation.label) \(presentation.value)")
+            if pin.isEstimatedDateWindow {
+                TimelineView(.periodic(from: .now, by: 3_600)) { context in
+                    countdown(at: context.date)
+                }
+            } else {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    countdown(at: context.date)
                 }
             }
 
             HStack(spacing: 8) {
-                Image(systemName: pin.isAllDay ? "sun.max" : "clock")
+                Image(systemName: pin.isEstimatedDateWindow ? "calendar.badge.clock" : (pin.isAllDay ? "sun.max" : "clock"))
                 Text(dateText)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -124,7 +126,30 @@ private struct PinnedCountdownCard: View {
         .accessibilityIdentifier("pin-card-\(pin.id)")
     }
 
+    private func countdown(at date: Date) -> some View {
+        let presentation = CountdownCalculator.presentation(for: pin, now: date)
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(presentation.label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.primary.opacity(0.68))
+            Text(presentation.value)
+                .font(.system(.title2, design: .rounded, weight: .bold))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .accessibilityLabel("\(presentation.label) \(presentation.value)")
+        }
+    }
+
     private var dateText: String {
+        if let window = CalendarEstimatedWindow(event: pin) {
+            let start = window.startDate.formatted(
+                .dateTime.month(.abbreviated).day().locale(Locale(identifier: "ja_JP"))
+            )
+            let latest = window.latestDate.formatted(
+                .dateTime.month(.abbreviated).day().locale(Locale(identifier: "ja_JP"))
+            )
+            return "見込み期間 \(start)〜\(latest)"
+        }
         if pin.isAllDay {
             return pin.startDate.formatted(
                 .dateTime.month(.abbreviated).day().weekday(.short).locale(Locale(identifier: "ja_JP"))

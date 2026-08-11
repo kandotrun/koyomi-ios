@@ -1,5 +1,22 @@
 import SwiftUI
 
+struct EventTagEmptyState: View {
+    var body: some View {
+        Label(
+            "タグは予定・タスクの追加／編集画面から設定できます",
+            systemImage: "number"
+        )
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .koyomiGlass(cornerRadius: 18)
+        .padding(.horizontal, 20)
+        .accessibilityIdentifier("event-tag-empty-state")
+    }
+}
+
 struct EventTagFilterBar: View {
     @ObservedObject var model: CalendarViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

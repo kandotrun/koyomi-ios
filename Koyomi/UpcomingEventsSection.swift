@@ -9,7 +9,7 @@ struct UpcomingEventsSection: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("これから")
                         .font(.title2.bold())
-                    Text("今日から18か月先まで")
+                    Text("18か月先＋未完了の見込み")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

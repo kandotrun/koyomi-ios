@@ -8,6 +8,7 @@ on:
       - "project.yml"
       - "ExportOptions.plist"
       - "Koyomi/**"
+      - "KoyomiAppTests/**"
       - "KoyomiWidget/**"
       - "KoyomiUITests/**"
       - "Shared/**"
@@ -20,6 +21,7 @@ on:
       - "project.yml"
       - "ExportOptions.plist"
       - "Koyomi/**"
+      - "KoyomiAppTests/**"
       - "KoyomiWidget/**"
       - "KoyomiUITests/**"
       - "Shared/**"
@@ -89,6 +91,7 @@ jobs:
           echo "id=$DEVICE_ID" >> "$GITHUB_OUTPUT"
           xcrun simctl boot "$DEVICE_ID"
           xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl privacy "$DEVICE_ID" grant calendar run.kan.koyomi
       - name: UI tests
         run: |
           set -o pipefail

@@ -26,6 +26,7 @@
 		2FF7C42F42785890DC8DAED3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D2E449C85D0D88E234964441 /* Assets.xcassets */; };
 		3F9989FB071AC75427D67EF5 /* UpcomingAgendaBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31324131442AED11352E9912 /* UpcomingAgendaBuilder.swift */; };
 		442C20539936EF1AF7E48EE4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 871AE47A793125540FE897E1 /* PrivacyInfo.xcprivacy */; };
+		4A10850978B9E94A89E19371 /* CalendarItemManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0917DA24B9A9FF0BF8C25FB /* CalendarItemManagement.swift */; };
 		4AF1188D52539C7C3860959B /* WidgetPinLayoutCapacity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D12AB9374503E27EAE12CB4 /* WidgetPinLayoutCapacity.swift */; };
 		4E3C38AEE4EFD47A6973B3F0 /* PinnedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1CFB02B7A8B325AD32CE2A /* PinnedEvent.swift */; };
 		4EBD6A0C20BF391A524B7D87 /* WidgetPinSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C62CA929BBD3BDACDBF225E /* WidgetPinSelector.swift */; };
@@ -33,12 +34,14 @@
 		55B8EF0D8DE53C4EF64890D5 /* KoyomiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6ACB0756FF66285FE3725C4 /* KoyomiApp.swift */; };
 		5FF2CDFC74B3B3CB91BE2445 /* WidgetPinSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C62CA929BBD3BDACDBF225E /* WidgetPinSelector.swift */; };
 		61191A142F3B4D462C383132 /* KoyomiUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A6358604FBE82CE0EB903C4 /* KoyomiUITests.swift */; };
+		626BF81659A52B205F14F443 /* CalendarManagementViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAA0EC72B769D5BAD58BA0E /* CalendarManagementViewModelTests.swift */; };
 		63A1B6B998924A9614E5B212 /* UpcomingEventsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3C37C4735FDF55C911B52A /* UpcomingEventsSection.swift */; };
 		68D3969845328D0FBAD83501 /* CalendarEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112838AE9C4A16865962C93F /* CalendarEvent.swift */; };
 		69ABBDBD1EE5B1D2B6A1575E /* PinnedEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1CFB02B7A8B325AD32CE2A /* PinnedEvent.swift */; };
 		6E415B75CD4A9110A9737B70 /* KoyomiHapticPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764496E410A18FB91AA92360 /* KoyomiHapticPolicy.swift */; };
 		726B28CA8D4269003326D1E8 /* AgendaSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A91739993CE7C26087C3972 /* AgendaSection.swift */; };
 		73546A8416E6DF9530A96D19 /* KoyomiWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FB3CE0781720749F4DF2A314 /* KoyomiWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		74EF8BF817B9B205C08A8FC1 /* EventKitCalendarSourceIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469C52D4FBF91CA42D162613 /* EventKitCalendarSourceIntegrationTests.swift */; };
 		7654DD680328AB7560540BC7 /* KoyomiWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CACB6CCD0868289E07DB93B /* KoyomiWidget.swift */; };
 		7A545595BB619A6B07455A26 /* PinnedEventReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF34F71291E2660C334489AB /* PinnedEventReconciler.swift */; };
 		860FCF93EF3B5F86920A4000 /* WidgetTimelinePlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAAD92B102AE36E10B0E13D0 /* WidgetTimelinePlanner.swift */; };
@@ -49,12 +52,17 @@
 		9F3A62A05C51182ED3A0704C /* WidgetPinLayoutCapacity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D12AB9374503E27EAE12CB4 /* WidgetPinLayoutCapacity.swift */; };
 		9F5C41BAD035E14CCF3C3600 /* CalendarPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E0C97D22E7C9246CBAB9C0 /* CalendarPermissionView.swift */; };
 		A630E20CBFB00E6BDB912760 /* UpcomingAgendaBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31324131442AED11352E9912 /* UpcomingAgendaBuilder.swift */; };
+		A940B40B0FE6817841DF539A /* CalendarItemEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83833B2A4CE70B9E8E0695E /* CalendarItemEditorSheet.swift */; };
+		AD95E9DEF0CD8AE4E4927EF3 /* CalendarItemQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62BE9352E86F6B8111C649B /* CalendarItemQuery.swift */; };
+		AEB756E7EFB04D18273796EA /* CalendarItemFilterBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA2ED2A35741FF9BF80C623C /* CalendarItemFilterBar.swift */; };
 		AEC896FEBF3B73A10D5DB4EC /* PinnedEventReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF34F71291E2660C334489AB /* PinnedEventReconciler.swift */; };
 		B3E376BCDF056A9F32E9C20F /* CountdownCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB09E6B044562B91BAF78599 /* CountdownCalculator.swift */; };
 		B477C1AB1C67C2240B026E70 /* CalendarEventSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 336FD203BAF0FE9A18ABC44E /* CalendarEventSource.swift */; };
+		BC69A380DE414097A1C7FAFE /* CalendarItemQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F62BE9352E86F6B8111C649B /* CalendarItemQuery.swift */; };
 		BECCB23495052EFB4172C47B /* EventTagViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEDE2723CB248FB04BBB63F /* EventTagViews.swift */; };
 		C05FD9A825F0021970BAFF35 /* CalendarLoadWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1103A1BC2A3F59C884BEE460 /* CalendarLoadWindow.swift */; };
 		C4D4C7B17AF62FF562836EF0 /* Color+Koyomi.swift in Sources */ = {isa = PBXBuildFile; fileRef = D73D6A318C6B4C7727545D53 /* Color+Koyomi.swift */; };
+		D4867D6CCEDA796CE6312923 /* CalendarItemManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0917DA24B9A9FF0BF8C25FB /* CalendarItemManagement.swift */; };
 		DF18A4CAEE72BD87DCDCFB31 /* DateStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4984A43D22BA936ABC10320C /* DateStrip.swift */; };
 		E6E44369990998AD4F91F2AB /* CalendarSelectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E2806BCC0FF34B441AAF73 /* CalendarSelectionStore.swift */; };
 		EDF2AA0E535CDD57D60DD8AE /* WidgetTimelinePlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAAD92B102AE36E10B0E13D0 /* WidgetTimelinePlanner.swift */; };
@@ -65,6 +73,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		52A6364607195193062ADBA8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 88564F533E19D387FBDEF25F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 86997D887D202BE1995D8E76;
+			remoteInfo = Koyomi;
+		};
 		5D77CBAA07C60D6194FF21C9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 88564F533E19D387FBDEF25F /* Project object */;
@@ -102,15 +117,18 @@
 		1103A1BC2A3F59C884BEE460 /* CalendarLoadWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarLoadWindow.swift; sourceTree = "<group>"; };
 		112838AE9C4A16865962C93F /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
 		1A91739993CE7C26087C3972 /* AgendaSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgendaSection.swift; sourceTree = "<group>"; };
+		1CAA0EC72B769D5BAD58BA0E /* CalendarManagementViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarManagementViewModelTests.swift; sourceTree = "<group>"; };
 		31324131442AED11352E9912 /* UpcomingAgendaBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingAgendaBuilder.swift; sourceTree = "<group>"; };
 		336FD203BAF0FE9A18ABC44E /* CalendarEventSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEventSource.swift; sourceTree = "<group>"; };
 		3521CB4B28E33912C9874D53 /* KoyomiRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoyomiRootView.swift; sourceTree = "<group>"; };
 		3886884ED7C0C1E77425F114 /* KoyomiWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KoyomiWidget.entitlements; sourceTree = "<group>"; };
 		3C62CA929BBD3BDACDBF225E /* WidgetPinSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPinSelector.swift; sourceTree = "<group>"; };
 		3EC94FBA4E8A8B91E2DF2455 /* KoyomiUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KoyomiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		469C52D4FBF91CA42D162613 /* EventKitCalendarSourceIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventKitCalendarSourceIntegrationTests.swift; sourceTree = "<group>"; };
 		4980207AF61DA1EF6DA426F5 /* Koyomi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Koyomi.entitlements; sourceTree = "<group>"; };
 		4984A43D22BA936ABC10320C /* DateStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateStrip.swift; sourceTree = "<group>"; };
 		4FF3444D9439A45D69C152C4 /* EventTitleMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTitleMetadata.swift; sourceTree = "<group>"; };
+		577325A60473BD705AD7A87E /* KoyomiAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KoyomiAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		590990DA39DE4B632A5B4958 /* AgendaBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgendaBuilder.swift; sourceTree = "<group>"; };
 		5A6358604FBE82CE0EB903C4 /* KoyomiUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoyomiUITests.swift; sourceTree = "<group>"; };
 		639C2637CBB8E51E135F3375 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -129,13 +147,17 @@
 		AA1CFB02B7A8B325AD32CE2A /* PinnedEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedEvent.swift; sourceTree = "<group>"; };
 		AF34F71291E2660C334489AB /* PinnedEventReconciler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedEventReconciler.swift; sourceTree = "<group>"; };
 		B6ACB0756FF66285FE3725C4 /* KoyomiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoyomiApp.swift; sourceTree = "<group>"; };
+		BA2ED2A35741FF9BF80C623C /* CalendarItemFilterBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarItemFilterBar.swift; sourceTree = "<group>"; };
 		BA3C37C4735FDF55C911B52A /* UpcomingEventsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingEventsSection.swift; sourceTree = "<group>"; };
 		C40AC52DA1A4733E4249FC37 /* KoyomiStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoyomiStyle.swift; sourceTree = "<group>"; };
 		CAAD92B102AE36E10B0E13D0 /* WidgetTimelinePlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTimelinePlanner.swift; sourceTree = "<group>"; };
 		D2E449C85D0D88E234964441 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D73D6A318C6B4C7727545D53 /* Color+Koyomi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Koyomi.swift"; sourceTree = "<group>"; };
 		E37633EB26F2B2B7F8F015F8 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		E83833B2A4CE70B9E8E0695E /* CalendarItemEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarItemEditorSheet.swift; sourceTree = "<group>"; };
+		F0917DA24B9A9FF0BF8C25FB /* CalendarItemManagement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarItemManagement.swift; sourceTree = "<group>"; };
 		F2E0C97D22E7C9246CBAB9C0 /* CalendarPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPermissionView.swift; sourceTree = "<group>"; };
+		F62BE9352E86F6B8111C649B /* CalendarItemQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarItemQuery.swift; sourceTree = "<group>"; };
 		F818DF57832711712CB0222D /* PinnedEventsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedEventsSection.swift; sourceTree = "<group>"; };
 		FB09E6B044562B91BAF78599 /* CountdownCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownCalculator.swift; sourceTree = "<group>"; };
 		FB3CE0781720749F4DF2A314 /* KoyomiWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = KoyomiWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -147,6 +169,7 @@
 			isa = PBXGroup;
 			children = (
 				C2A90AF1BCE027AAE90C88B7 /* Koyomi */,
+				8BCE3532C0EC7C0C9BC7DE2E /* KoyomiAppTests */,
 				81EA33A6EE672F40B0B03058 /* KoyomiUITests */,
 				6FD809159A8715FEFE68EA90 /* KoyomiWidget */,
 				88F880741A65ED7D4C1ADDCA /* Resources */,
@@ -160,6 +183,8 @@
 			children = (
 				590990DA39DE4B632A5B4958 /* AgendaBuilder.swift */,
 				112838AE9C4A16865962C93F /* CalendarEvent.swift */,
+				F0917DA24B9A9FF0BF8C25FB /* CalendarItemManagement.swift */,
+				F62BE9352E86F6B8111C649B /* CalendarItemQuery.swift */,
 				1103A1BC2A3F59C884BEE460 /* CalendarLoadWindow.swift */,
 				A2E2806BCC0FF34B441AAF73 /* CalendarSelectionStore.swift */,
 				D73D6A318C6B4C7727545D53 /* Color+Koyomi.swift */,
@@ -208,10 +233,20 @@
 			isa = PBXGroup;
 			children = (
 				0D5EFA0A9F13F193CEA0CAD8 /* Koyomi.app */,
+				577325A60473BD705AD7A87E /* KoyomiAppTests.xctest */,
 				3EC94FBA4E8A8B91E2DF2455 /* KoyomiUITests.xctest */,
 				FB3CE0781720749F4DF2A314 /* KoyomiWidget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		8BCE3532C0EC7C0C9BC7DE2E /* KoyomiAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				1CAA0EC72B769D5BAD58BA0E /* CalendarManagementViewModelTests.swift */,
+				469C52D4FBF91CA42D162613 /* EventKitCalendarSourceIntegrationTests.swift */,
+			);
+			path = KoyomiAppTests;
 			sourceTree = "<group>";
 		};
 		C2A90AF1BCE027AAE90C88B7 /* Koyomi */ = {
@@ -222,6 +257,8 @@
 				D2E449C85D0D88E234964441 /* Assets.xcassets */,
 				336FD203BAF0FE9A18ABC44E /* CalendarEventSource.swift */,
 				810121827E1DE57F340D2D19 /* CalendarFilterSheet.swift */,
+				E83833B2A4CE70B9E8E0695E /* CalendarItemEditorSheet.swift */,
+				BA2ED2A35741FF9BF80C623C /* CalendarItemFilterBar.swift */,
 				F2E0C97D22E7C9246CBAB9C0 /* CalendarPermissionView.swift */,
 				09F3FA2031FF1EBF616DCFA7 /* CalendarViewModel.swift */,
 				4984A43D22BA936ABC10320C /* DateStrip.swift */,
@@ -244,6 +281,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2D94AA2A2B2E3CBB6AFCE778 /* KoyomiAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9B88AEBA999B4A8483719C71 /* Build configuration list for PBXNativeTarget "KoyomiAppTests" */;
+			buildPhases = (
+				D8407C8CBD433F0ADF8F1C22 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C791A017D69D1E30275987AE /* PBXTargetDependency */,
+			);
+			name = KoyomiAppTests;
+			packageProductDependencies = (
+			);
+			productName = KoyomiAppTests;
+			productReference = 577325A60473BD705AD7A87E /* KoyomiAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		49DC4B9623542389FF59A8D5 /* KoyomiUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FEBD5DC269DEC38CA68DB5B2 /* Build configuration list for PBXNativeTarget "KoyomiUITests" */;
@@ -309,6 +364,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					2D94AA2A2B2E3CBB6AFCE778 = {
+						DevelopmentTeam = UGNVGWZMAU;
+						ProvisioningStyle = Automatic;
+					};
 					49DC4B9623542389FF59A8D5 = {
 						DevelopmentTeam = UGNVGWZMAU;
 						ProvisioningStyle = Automatic;
@@ -340,6 +399,7 @@
 			targets = (
 				86997D887D202BE1995D8E76 /* Koyomi */,
 				BE8A11FD83AA030981B3B09B /* KoyomiWidget */,
+				2D94AA2A2B2E3CBB6AFCE778 /* KoyomiAppTests */,
 				49DC4B9623542389FF59A8D5 /* KoyomiUITests */,
 			);
 		};
@@ -376,6 +436,10 @@
 				045B3EAA230E94AF59DF3A5E /* CalendarEvent.swift in Sources */,
 				B477C1AB1C67C2240B026E70 /* CalendarEventSource.swift in Sources */,
 				15727E6DD2CC3E967B4E9ADB /* CalendarFilterSheet.swift in Sources */,
+				A940B40B0FE6817841DF539A /* CalendarItemEditorSheet.swift in Sources */,
+				AEB756E7EFB04D18273796EA /* CalendarItemFilterBar.swift in Sources */,
+				D4867D6CCEDA796CE6312923 /* CalendarItemManagement.swift in Sources */,
+				BC69A380DE414097A1C7FAFE /* CalendarItemQuery.swift in Sources */,
 				C05FD9A825F0021970BAFF35 /* CalendarLoadWindow.swift in Sources */,
 				9F5C41BAD035E14CCF3C3600 /* CalendarPermissionView.swift in Sources */,
 				29EE5AA7285983B3995FB508 /* CalendarSelectionStore.swift in Sources */,
@@ -414,12 +478,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D8407C8CBD433F0ADF8F1C22 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				626BF81659A52B205F14F443 /* CalendarManagementViewModelTests.swift in Sources */,
+				74EF8BF817B9B205C08A8FC1 /* EventKitCalendarSourceIntegrationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E5263E3C559730D374E18FE7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				92B61F8768CD0165436290AD /* AgendaBuilder.swift in Sources */,
 				68D3969845328D0FBAD83501 /* CalendarEvent.swift in Sources */,
+				4A10850978B9E94A89E19371 /* CalendarItemManagement.swift in Sources */,
+				AD95E9DEF0CD8AE4E4927EF3 /* CalendarItemQuery.swift in Sources */,
 				986C631780953CEFA8E7702F /* CalendarLoadWindow.swift in Sources */,
 				E6E44369990998AD4F91F2AB /* CalendarSelectionStore.swift in Sources */,
 				2A457C63C4E6F1F487D3F1A2 /* Color+Koyomi.swift in Sources */,
@@ -451,9 +526,31 @@
 			target = 86997D887D202BE1995D8E76 /* Koyomi */;
 			targetProxy = 5D77CBAA07C60D6194FF21C9 /* PBXContainerItemProxy */;
 		};
+		C791A017D69D1E30275987AE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 86997D887D202BE1995D8E76 /* Koyomi */;
+			targetProxy = 52A6364607195193062ADBA8 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		484CFDAE40D8D44CA886D4C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = run.kan.koyomi.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Koyomi.app/Koyomi";
+			};
+			name = Debug;
+		};
 		4EADA1E78454D4570288F669 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -506,7 +603,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = UGNVGWZMAU;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -526,7 +623,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 2.0.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -596,6 +693,23 @@
 			};
 			name = Release;
 		};
+		A41632EBBD957ECB6793E966 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = run.kan.koyomi.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Koyomi.app/Koyomi";
+			};
+			name = Release;
+		};
 		C14DAEF7E85FFBADE4BE7BEB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -631,7 +745,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = UGNVGWZMAU;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -645,7 +759,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 2.0.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -705,6 +819,15 @@
 			buildConfigurations = (
 				7CB9821A0A6BB0227DD96403 /* Debug */,
 				E4C25C53BC373FF83EAA6D8A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9B88AEBA999B4A8483719C71 /* Build configuration list for PBXNativeTarget "KoyomiAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				484CFDAE40D8D44CA886D4C6 /* Debug */,
+				A41632EBBD957ECB6793E966 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

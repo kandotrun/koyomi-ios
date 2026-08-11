@@ -20,7 +20,12 @@ public enum UpcomingAgendaBuilder {
     ) -> [UpcomingAgendaSection] {
         let today = calendar.startOfDay(for: now)
         let activeEvents = events
-            .filter { $0.endDate > now }
+            .filter {
+                if $0.isEstimatedDateWindow {
+                    return !$0.isCompletedTask
+                }
+                return $0.endDate > now
+            }
             .sorted(by: eventComesFirst)
 
         let grouped = Dictionary(grouping: activeEvents) { event in
