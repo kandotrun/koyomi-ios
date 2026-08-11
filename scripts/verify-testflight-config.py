@@ -30,104 +30,12 @@ def require_yaml_setting(project: str, key: str, expected: str) -> None:
     assert re.search(pattern, project), f"{key} must be {expected!r}"
 
 
-def pbx_object(project: str, object_id: str) -> str:
-    headers = list(
-        re.finditer(
-            rf"(?m)^\s*{re.escape(object_id)} /\* [^\n]+ \*/ = \{{",
-            project,
-        )
-    )
-    assert len(headers) == 1, f"PBX object {object_id} must exist exactly once"
-    header = headers[0]
-
-    brace_start = project.find("{", header.start(), header.end())
-    depth = 0
-    in_string = False
-    escaped = False
-    for index in range(brace_start, len(project)):
-        character = project[index]
-        if in_string:
-            if escaped:
-                escaped = False
-            elif character == "\\":
-                escaped = True
-            elif character == '"':
-                in_string = False
-            continue
-        if character == '"':
-            in_string = True
-        elif character == "{":
-            depth += 1
-        elif character == "}":
-            depth -= 1
-            if depth == 0:
-                return project[header.start() : index + 1]
-
-    raise AssertionError(f"unterminated PBX object {object_id}")
-
-
-def require_generated_build_number(project: str, expected: str) -> None:
-    root_objects = re.findall(
-        r"(?m)^\s*rootObject = ([A-F0-9]+) /\* Project object \*/;$",
-        project,
-    )
-    assert len(root_objects) == 1, "the Xcode project must define exactly one root object"
-    project_object = pbx_object(project, root_objects[0])
-    assert re.search(r"(?m)^\s*isa = PBXProject;$", project_object), (
-        "root object must be a PBXProject"
-    )
-
-    configuration_lists = re.findall(
-        r'(?m)^\s*buildConfigurationList = ([A-F0-9]+) '
-        r'/\* Build configuration list for PBXProject "[^"]+" \*/;$',
-        project_object,
-    )
-    assert len(configuration_lists) == 1, (
-        "PBXProject must define exactly one build configuration list"
-    )
-
-    configuration_list_object = pbx_object(project, configuration_lists[0])
-    assert re.search(r"(?m)^\s*isa = XCConfigurationList;$", configuration_list_object), (
-        "PBXProject build configuration list must be an XCConfigurationList"
-    )
-    configurations = re.findall(
-        r"(?m)^\s*([A-F0-9]+) /\* (Debug|Release) \*/,$",
-        configuration_list_object,
-    )
-    assert len(configurations) == 2 and {name for _, name in configurations} == {
-        "Debug",
-        "Release",
-    }, (
-        "the generated Xcode project must define exactly one Debug and one Release configuration"
-    )
-
-    for configuration_id, configuration_name in configurations:
-        configuration = pbx_object(project, configuration_id)
-        assert re.search(r"(?m)^\s*isa = XCBuildConfiguration;$", configuration), (
-            f"{configuration_name} must reference an XCBuildConfiguration"
-        )
-        assert re.search(
-            rf"(?m)^\s*name = {re.escape(configuration_name)};$",
-            configuration,
-        ), f"{configuration_name} configuration name must match its reference"
-        version = re.search(
-            r"(?m)^\s*CURRENT_PROJECT_VERSION = ([^;]+);$",
-            configuration,
-        )
-        assert version, f"{configuration_name} must define CURRENT_PROJECT_VERSION"
-        assert version.group(1).strip() == expected, (
-            f"generated Xcode project {configuration_name} build number must be {expected}"
-        )
-
-
 def main() -> None:
     project = (ROOT / "project.yml").read_text(encoding="utf-8")
-    generated_project = (ROOT / "Koyomi.xcodeproj/project.pbxproj").read_text(encoding="utf-8")
     require_yaml_setting(project, "DEVELOPMENT_TEAM", TEAM_ID)
     require_yaml_setting(project, "CODE_SIGN_STYLE", "Automatic")
     require_yaml_setting(project, "MARKETING_VERSION", "2.0.0")
     require_yaml_setting(project, "CURRENT_PROJECT_VERSION", EXPECTED_BUILD_NUMBER)
-    require_generated_build_number(generated_project, EXPECTED_BUILD_NUMBER)
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", APP_ID)
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", WIDGET_ID)
     assert project.count('TARGETED_DEVICE_FAMILY: "1"') == 4, (

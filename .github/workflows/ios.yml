@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "project.yml"
+      - "Koyomi.xcodeproj/**"
       - "ExportOptions.plist"
       - "Koyomi/**"
       - "KoyomiAppTests/**"
@@ -19,6 +20,7 @@ on:
   pull_request:
     paths:
       - "project.yml"
+      - "Koyomi.xcodeproj/**"
       - "ExportOptions.plist"
       - "Koyomi/**"
       - "KoyomiAppTests/**"
@@ -67,6 +69,16 @@ jobs:
         run: brew install xcodegen
       - name: Generate project
         run: xcodegen generate
+      - name: Verify generated project is committed
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- Koyomi.xcodeproj
+          untracked=$(git ls-files --others --exclude-standard -- Koyomi.xcodeproj)
+          if [[ -n "$untracked" ]]; then
+            echo "::error::Untracked generated Xcode project files"
+            printf '%s\n' "$untracked"
+            exit 1
+          fi
       - name: Simulator build
         run: |
           set -o pipefail
