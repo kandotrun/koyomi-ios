@@ -14,6 +14,10 @@ WIDGET_ID = "run.kan.koyomi.widget"
 KEYCHAIN_ACCESS_GROUP = "$(AppIdentifierPrefix)run.kan.koyomi.shared"
 SIGNED_KEYCHAIN_ACCESS_GROUP = f"{TEAM_ID}.run.kan.koyomi.shared"
 SUPPORTED_INTERFACE_ORIENTATIONS = ["UIInterfaceOrientationPortrait"]
+EXPECTED_BUILD_NUMBER = "3"
+EXPECTED_WIDGET_FAMILIES = (
+    ".supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])"
+)
 
 
 def load_plist(relative_path: str) -> dict:
@@ -31,7 +35,7 @@ def main() -> None:
     require_yaml_setting(project, "DEVELOPMENT_TEAM", TEAM_ID)
     require_yaml_setting(project, "CODE_SIGN_STYLE", "Automatic")
     require_yaml_setting(project, "MARKETING_VERSION", "2.0.0")
-    require_yaml_setting(project, "CURRENT_PROJECT_VERSION", "2")
+    require_yaml_setting(project, "CURRENT_PROJECT_VERSION", EXPECTED_BUILD_NUMBER)
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", APP_ID)
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", WIDGET_ID)
     assert project.count('TARGETED_DEVICE_FAMILY: "1"') == 4, (
@@ -75,6 +79,9 @@ def main() -> None:
     assert "storage: KeychainPinnedEventsDataStorage()" in app_dependencies
     assert "migrationStorage: UserDefaultsPinnedEventsDataStorage(defaults: .standard)" in app_dependencies
     assert "PinnedEventsStore(storage: KeychainPinnedEventsDataStorage())" in widget_source
+    assert EXPECTED_WIDGET_FAMILIES in widget_source, (
+        "the widget must advertise Small, Medium, Large, and accessory rectangular families"
+    )
 
     privacy = load_plist("Resources/PrivacyInfo.xcprivacy")
     assert privacy.get("NSPrivacyTracking") is False
