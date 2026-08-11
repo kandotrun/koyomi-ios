@@ -128,7 +128,7 @@ final class KoyomiUITests: XCTestCase {
 
     func testPinButtonAddsAnAgendaEventToPinnedEvents() {
         let app = launchDemo()
-        let pinButton = app.buttons["agenda-pin-demo-dentist"]
+        let pinButton = app.buttons["agenda-pin-demo-release-week"]
         XCTAssertTrue(pinButton.waitForExistence(timeout: 5))
         if !pinButton.isHittable {
             app.swipeUp()
@@ -144,7 +144,7 @@ final class KoyomiUITests: XCTestCase {
             NSPredicate(
                 format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
                 "pin-remove-",
-                "歯科検診"
+                "リリース週"
             )
         ).firstMatch
         for _ in 0..<4 where !remove.exists {
