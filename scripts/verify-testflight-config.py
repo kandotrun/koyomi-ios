@@ -30,12 +30,21 @@ def require_yaml_setting(project: str, key: str, expected: str) -> None:
     assert re.search(pattern, project), f"{key} must be {expected!r}"
 
 
+def require_generated_build_number(project: str, expected: str) -> None:
+    expected_setting = f"CURRENT_PROJECT_VERSION = {expected};"
+    assert project.count(expected_setting) == 2, (
+        "the generated Xcode project must use the expected build number in Debug and Release"
+    )
+
+
 def main() -> None:
     project = (ROOT / "project.yml").read_text(encoding="utf-8")
+    generated_project = (ROOT / "Koyomi.xcodeproj/project.pbxproj").read_text(encoding="utf-8")
     require_yaml_setting(project, "DEVELOPMENT_TEAM", TEAM_ID)
     require_yaml_setting(project, "CODE_SIGN_STYLE", "Automatic")
     require_yaml_setting(project, "MARKETING_VERSION", "2.0.0")
     require_yaml_setting(project, "CURRENT_PROJECT_VERSION", EXPECTED_BUILD_NUMBER)
+    require_generated_build_number(generated_project, EXPECTED_BUILD_NUMBER)
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", APP_ID)
     require_yaml_setting(project, "PRODUCT_BUNDLE_IDENTIFIER", WIDGET_ID)
     assert project.count('TARGETED_DEVICE_FAMILY: "1"') == 4, (
