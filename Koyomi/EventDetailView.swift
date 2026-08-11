@@ -89,10 +89,15 @@ struct EventDetailView: View {
                             KoyomiHaptics.perform(.togglePin)
                             onTogglePin(event)
                         } label: {
-                            Label("この予定をピン留め", systemImage: "pin.fill")
+                            Label(
+                                event.managementKind == .task
+                                    ? "このタスクをピン留め"
+                                    : "この予定をピン留め",
+                                systemImage: "pin.fill"
+                            )
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.glass)
                         .tint(tint)
                     }
 
