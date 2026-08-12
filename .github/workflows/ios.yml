@@ -58,7 +58,7 @@ jobs:
   test-and-build:
     needs: workflow-lint
     runs-on: macos-26
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
       - name: Verify TestFlight distribution contract
