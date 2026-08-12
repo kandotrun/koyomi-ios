@@ -332,10 +332,11 @@ struct EventDetailView: View {
 
     private func togglePin() {
         KoyomiHaptics.perform(.togglePin)
-        if event.isRecurring {
+        switch CalendarPinMutationPolicy.action(isRecurring: event.isRecurring) {
+        case let .apply(scope):
+            togglePin(scope: scope)
+        case .chooseScope:
             isPinScopePresented = true
-        } else {
-            togglePin(scope: .thisEvent)
         }
     }
 

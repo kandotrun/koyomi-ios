@@ -356,7 +356,13 @@ final class KoyomiUITests: XCTestCase {
         title.tap()
         title.typeText("家族でランチ")
 
-        let workSuggestion = app.buttons["calendar-item-tag-suggestion-仕事"]
+        let workSuggestion = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND label == %@",
+                "calendar-item-tag-suggestion",
+                "タグ、仕事を追加"
+            )
+        ).firstMatch
         XCTAssertTrue(scrollToExistence(workSuggestion, in: app))
         let suggestionRail = app.scrollViews["calendar-item-tag-suggestions-scroll"]
         XCTAssertTrue(suggestionRail.exists)
@@ -367,7 +373,13 @@ final class KoyomiUITests: XCTestCase {
         )
         workSuggestion.tap()
 
-        let selectedWork = app.buttons["calendar-item-tag-selected-仕事"]
+        let selectedWork = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND label == %@",
+                "calendar-item-tag-selected",
+                "タグ、仕事を削除"
+            )
+        ).firstMatch
         XCTAssertTrue(selectedWork.waitForExistence(timeout: 2))
         XCTAssertEqual(selectedWork.value as? String, "選択中")
         XCTAssertTrue(app.staticTexts["タップで外す"].exists)
@@ -390,13 +402,19 @@ final class KoyomiUITests: XCTestCase {
             "キーボード表示中も追加ボタン全体をタップできる"
         )
         addTag.tap()
-        XCTAssertTrue(app.buttons["calendar-item-tag-selected-家族"].waitForExistence(timeout: 2))
+        let selectedFamily = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND label == %@",
+                "calendar-item-tag-selected",
+                "タグ、家族を削除"
+            )
+        ).firstMatch
+        XCTAssertTrue(selectedFamily.waitForExistence(timeout: 2))
 
         selectedWork.tap()
         XCTAssertTrue(selectedWork.waitForNonExistence(timeout: 2))
         XCTAssertTrue(workSuggestion.waitForExistence(timeout: 2), "外したタグは候補からすぐ戻せる")
 
-        let selectedFamily = app.buttons["calendar-item-tag-selected-家族"]
         let navigationBar = app.navigationBars.firstMatch
         XCTAssertTrue(navigationBar.exists)
         XCTAssertGreaterThanOrEqual(
@@ -429,7 +447,13 @@ final class KoyomiUITests: XCTestCase {
         input.typeText("とても長いプロジェクト名でも安全に編集できるタグ")
         app.buttons["calendar-item-tag-add"].tap()
 
-        let chip = app.buttons["calendar-item-tag-selected-とても長いプロジェクト名でも安全に編集できるタグ"]
+        let chip = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND label == %@",
+                "calendar-item-tag-selected",
+                "タグ、とても長いプロジェクト名でも安全に編集できるタグを削除"
+            )
+        ).firstMatch
         XCTAssertTrue(chip.waitForExistence(timeout: 2))
         XCTAssertGreaterThan(
             chip.frame.height,
@@ -455,7 +479,14 @@ final class KoyomiUITests: XCTestCase {
         input.tap()
         input.typeText("完了")
         app.buttons["calendar-item-tag-add"].tap()
-        XCTAssertTrue(app.buttons["calendar-item-tag-selected-完了"].waitForExistence(timeout: 2))
+        let selectedCompletedTag = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND label == %@",
+                "calendar-item-tag-selected",
+                "タグ、完了を削除"
+            )
+        ).firstMatch
+        XCTAssertTrue(selectedCompletedTag.waitForExistence(timeout: 2))
 
         let taskKind = app.segmentedControls.buttons["タスク"]
         for _ in 0..<6 where !taskKind.isHittable {
@@ -467,10 +498,10 @@ final class KoyomiUITests: XCTestCase {
         let completed = app.switches["完了"]
         XCTAssertTrue(completed.waitForExistence(timeout: 2), "完了状態を専用Toggleで確認できる")
         XCTAssertEqual(completed.value as? String, "1")
-        XCTAssertTrue(app.buttons["calendar-item-tag-selected-完了"].waitForNonExistence(timeout: 2))
+        XCTAssertTrue(selectedCompletedTag.waitForNonExistence(timeout: 2))
 
         app.segmentedControls.buttons["予定"].tap()
-        XCTAssertTrue(scrollToExistence(app.buttons["calendar-item-tag-selected-完了"], in: app))
+        XCTAssertTrue(scrollToExistence(selectedCompletedTag, in: app))
     }
 
     func testCreatesCompletesAndUndoesTask() {

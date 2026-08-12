@@ -10,6 +10,16 @@ final class CalendarManagementViewModelTests: XCTestCase {
         XCTAssertTrue(KoyomiResponsiveLayout.usesVerticalCardLayout(for: .accessibility5))
     }
 
+    func testDemoSourceRejectsPinMutationForReadOnlyCalendar() throws {
+        let source = DemoCalendarSource(hasReadOnlyPinnedEvent: true)
+        let readOnlyPin = try XCTUnwrap(source.allEvents.first(where: { !$0.canEdit && $0.isPinned }))
+
+        XCTAssertThrowsError(try source.setPinned(readOnlyPin, pinned: false, scope: .thisEvent)) { error in
+            XCTAssertEqual(error as? CalendarEventSourceError, .readOnlyCalendar)
+        }
+        XCTAssertTrue(try XCTUnwrap(source.allEvents.first(where: { $0.id == readOnlyPin.id })).isPinned)
+    }
+
     func testPinnedSectionTimelineSwitchesAtTheNextLifecycleBoundary() {
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         let ongoing = pinnedEvent(
@@ -447,6 +457,49 @@ final class CalendarManagementViewModelTests: XCTestCase {
 
         XCTAssertEqual(fixture.model.pinnedEvents.map(\.id), [event.pinnedSnapshot.id])
         XCTAssertEqual(fixture.pinStore.load().map(\.id), [event.pinnedSnapshot.id])
+    }
+
+    func testEmptyCalendarListKeepsExistingEventAndPinSnapshots() throws {
+        let event = makeEvent(title: "同期中も保持する予定 #ピン")
+        let fixture = try makeFixture(events: [event], pinned: [event.pinnedSnapshot])
+        let previousEvents = fixture.model.events
+        let previousPins = fixture.model.pinnedEvents
+
+        fixture.source.availableCalendars = []
+        fixture.model.refresh()
+
+        XCTAssertEqual(fixture.model.events, previousEvents)
+        XCTAssertEqual(fixture.model.pinnedEvents, previousPins)
+        XCTAssertEqual(fixture.pinStore.load(), previousPins)
+    }
+
+    func testRetryablePinRevalidationKeepsEventAndPinSnapshotsAtomic() throws {
+        let farStart = try XCTUnwrap(Calendar(identifier: .gregorian).date(
+            byAdding: .year,
+            value: 6,
+            to: Date(timeIntervalSince1970: 1_786_406_400)
+        ))
+        let farEvent = makeEvent(
+            idSuffix: "far-atomic-retry",
+            title: "再照合を待つ遠い予定 #ピン",
+            startDate: farStart,
+            endDate: farStart.addingTimeInterval(3_600)
+        )
+        let visibleEvent = makeEvent(idSuffix: "visible-before", title: "更新前の予定")
+        let fixture = try makeFixture(
+            events: [visibleEvent, farEvent],
+            pinned: [farEvent.pinnedSnapshot]
+        )
+        let previousEvents = fixture.model.events
+        let previousPins = fixture.model.pinnedEvents
+        fixture.source.storedEvents[0].title = "更新後の予定"
+        fixture.source.failEventReadsShorterThan = 7_200
+
+        fixture.model.refresh()
+
+        XCTAssertEqual(fixture.model.events, previousEvents)
+        XCTAssertEqual(fixture.model.pinnedEvents, previousPins)
+        XCTAssertEqual(fixture.pinStore.load(), previousPins)
     }
 
     func testPinnedEventOutsideDiscoveryWindowSurvivesCalendarDateMove() throws {

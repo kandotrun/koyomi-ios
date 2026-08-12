@@ -385,6 +385,22 @@ struct CalendarItemManagementTests {
         #expect(title == "旅行を予約 #タスク #重要 #旅行")
     }
 
+    @Test("単発予定のピン操作はこの予定だけへ即時適用する")
+    func appliesSingleEventPinMutationImmediately() {
+        #expect(
+            CalendarPinMutationPolicy.action(isRecurring: false)
+                == .apply(.thisEvent)
+        )
+    }
+
+    @Test("繰り返し予定のピン操作は適用範囲の選択を要求する")
+    func requestsScopeSelectionForRecurringPinMutation() {
+        #expect(
+            CalendarPinMutationPolicy.action(isRecurring: true)
+                == .chooseScope
+        )
+    }
+
     @Test("タグ編集は貼り付け入力を正規化して表記揺れを重複させない")
     func normalizesTagsAddedFromEditorInput() {
         let updated = CalendarTagEditorPolicy.adding(

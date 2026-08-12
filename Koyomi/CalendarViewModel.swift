@@ -273,12 +273,12 @@ final class CalendarViewModel: ObservableObject {
             } catch {
                 postSaveIssue = true
             }
+            reveal(created)
             if postSaveIssue {
                 errorMessage = draft.dateMode == .estimatedWindow
                     ? "見込みタスクは保存しましたが、ピンまたは一覧の同期を完了できませんでした。"
                     : "予定は保存しましたが、最新状態を再読込できませんでした。"
             }
-            reveal(created)
             return created
         } catch {
             errorMessage = managementErrorMessage(for: error, action: "保存")
@@ -653,13 +653,13 @@ final class CalendarViewModel: ObservableObject {
             calendarIDs: Set(calendars.map(\.id))
         )
 
-        events = selectedEvents
-        upcomingEvents = futureEvents
-        loadedInterval = selectedInterval
         try replacePinnedSnapshots(
             with: selectedEvents + pinCandidates + additionalPinCandidates,
             recurrenceValidationInterval: pinDiscoveryInterval
         )
+        events = selectedEvents
+        upcomingEvents = futureEvents
+        loadedInterval = selectedInterval
         reconcileSelectedTag()
         resolvePendingDeepLinkIfPossible()
     }
@@ -670,10 +670,11 @@ final class CalendarViewModel: ObservableObject {
         }
 
         do {
-            events = try source.events(in: interval, calendarIDs: selectedCalendarIDs)
+            let selectedEvents = try source.events(in: interval, calendarIDs: selectedCalendarIDs)
+            try reloadPinnedSnapshots(additionalCandidates: selectedEvents)
+            events = selectedEvents
             loadedInterval = interval
             reconcileSelectedTag()
-            try reloadPinnedSnapshots(additionalCandidates: events)
             errorMessage = nil
         } catch {
             errorMessage = "予定を読み込めませんでした。"
@@ -703,19 +704,22 @@ final class CalendarViewModel: ObservableObject {
         let candidateIDs = Set(candidates.map(\.id))
         let allCalendarIDs = Set(calendars.map(\.id))
 
-        if !allCalendarIDs.isEmpty {
-            for cachedPin in pinStore.load() where !candidateIDs.contains(cachedPin.id) {
-                switch resolvePinnedEvent(
-                    cachedPin,
-                    calendarIDs: allCalendarIDs
-                ) {
-                case let .resolved(event):
-                    authoritativeCandidates.append(event)
-                case .missing:
-                    continue
-                case .retry:
-                    throw CalendarEventSourceError.unsupported
-                }
+        // An empty Calendar list is not authoritative: EventKit may be between
+        // account refreshes. Never replace a healthy Widget cache from that state.
+        guard !allCalendarIDs.isEmpty else {
+            throw CalendarEventSourceError.unsupported
+        }
+        for cachedPin in pinStore.load() where !candidateIDs.contains(cachedPin.id) {
+            switch resolvePinnedEvent(
+                cachedPin,
+                calendarIDs: allCalendarIDs
+            ) {
+            case let .resolved(event):
+                authoritativeCandidates.append(event)
+            case .missing:
+                continue
+            case .retry:
+                throw CalendarEventSourceError.unsupported
             }
         }
 
@@ -725,13 +729,14 @@ final class CalendarViewModel: ObservableObject {
             recurrenceValidationInterval: recurrenceValidationInterval,
             calendar: calendar
         )
-        editablePinIDs = Set(
+        let nextEditablePinIDs = Set(
             authoritativeCandidates
                 .filter { $0.isPinned && $0.canEdit }
                 .map { $0.pinnedSnapshot.id }
         )
-        pinnedEvents = snapshots
         try pinStore.save(snapshots)
+        editablePinIDs = nextEditablePinIDs
+        pinnedEvents = snapshots
         WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
     }
 

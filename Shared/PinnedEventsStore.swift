@@ -197,7 +197,10 @@ public final class PinnedEventsStore: @unchecked Sendable {
         }
 
         if let primaryData {
-            let events = decode(primaryData) ?? []
+            guard let events = decode(primaryData) else {
+                // Corrupt primary data must not destroy a healthy migration fallback.
+                return []
+            }
             // Primary wins, but mirror it so a stale fallback cannot reappear
             // after a later Keychain restore or reset.
             if let migrationStorage, let synchronizedData = try? encode(events) {

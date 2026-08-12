@@ -175,10 +175,12 @@ struct PinnedEventsSection: View {
     }
 
     private func requestRemoval(of pin: PinnedEvent) {
-        if model.event(for: pin).isRecurring {
+        let event = model.event(for: pin)
+        switch CalendarPinMutationPolicy.action(isRecurring: event.isRecurring) {
+        case let .apply(scope):
+            model.removePin(pin, scope: scope)
+        case .chooseScope:
             pendingRemoval = PendingPinRemoval(pin: pin)
-        } else {
-            model.removePin(pin, scope: .thisEvent)
         }
     }
 

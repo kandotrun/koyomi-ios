@@ -280,6 +280,9 @@ final class DemoCalendarSource: CalendarEventSource {
             throw CalendarEventSourceError.futureScopeUnavailable
         }
         let index = try exactIndex(for: event)
+        guard writableCalendar(id: allEvents[index].calendarID) != nil else {
+            throw CalendarEventSourceError.readOnlyCalendar
+        }
         var updated = allEvents[index]
         updated.title = EventTitleTagMutator.applying(
             EventTitleTagChange(

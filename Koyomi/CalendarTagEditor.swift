@@ -187,7 +187,7 @@ struct CalendarTagEditor: View {
         .accessibilityValue("選択中")
         .accessibilityHint("ダブルタップで外します")
         .accessibilityAddTraits(.isSelected)
-        .accessibilityIdentifier("calendar-item-tag-selected-\(tag)")
+        .accessibilityIdentifier("calendar-item-tag-selected")
     }
 
     @ViewBuilder
@@ -223,7 +223,7 @@ struct CalendarTagEditor: View {
         .buttonStyle(.plain)
         .contentShape(Capsule())
         .accessibilityLabel("タグ、\(tag)を追加")
-        .accessibilityIdentifier("calendar-item-tag-suggestion-\(tag)")
+        .accessibilityIdentifier("calendar-item-tag-suggestion")
     }
 
     @ViewBuilder

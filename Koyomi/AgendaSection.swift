@@ -111,10 +111,11 @@ struct AgendaEventRow: View {
     }
 
     private func requestPinChange() {
-        if event.isRecurring {
+        switch CalendarPinMutationPolicy.action(isRecurring: event.isRecurring) {
+        case let .apply(scope):
+            onTogglePin(scope)
+        case .chooseScope:
             isPinScopePresented = true
-        } else {
-            onTogglePin(.thisEvent)
         }
     }
 

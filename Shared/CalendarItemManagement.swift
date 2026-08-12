@@ -71,6 +71,17 @@ public enum CalendarMutationScope: Hashable, Sendable {
     case futureEvents
 }
 
+public enum CalendarPinMutationAction: Equatable, Sendable {
+    case apply(CalendarMutationScope)
+    case chooseScope
+}
+
+public enum CalendarPinMutationPolicy {
+    public static func action(isRecurring: Bool) -> CalendarPinMutationAction {
+        isRecurring ? .chooseScope : .apply(.thisEvent)
+    }
+}
+
 public struct CalendarCompletionUndoAction: Equatable, Sendable {
     public let previousCompletedValue: Bool
     public let scope: CalendarMutationScope

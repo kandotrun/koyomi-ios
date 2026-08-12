@@ -69,6 +69,18 @@ final class PinnedEventsStoreTests: XCTestCase {
         XCTAssertEqual(PinnedEventsStore(storage: legacy).load(), [primaryEvent])
     }
 
+    func testCorruptPrimaryDoesNotOverwriteHealthyMigrationFallback() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let legacyEvent = makeEvent(id: "legacy", start: Date(timeIntervalSince1970: 100))
+        try primary.write(Data("not-json".utf8))
+        try PinnedEventsStore(storage: legacy).save([legacyEvent])
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+
+        XCTAssertEqual(migratingStore.load(), [])
+        XCTAssertEqual(PinnedEventsStore(storage: legacy).load(), [legacyEvent])
+    }
+
     func testEmptyPrimaryConsumesStaleLegacyFallback() throws {
         let primary = InMemoryPinnedEventsDataStorage()
         let legacy = InMemoryPinnedEventsDataStorage()
