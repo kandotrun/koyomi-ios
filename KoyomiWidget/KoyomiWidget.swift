@@ -101,8 +101,10 @@ struct KoyomiWidgetView: View {
             switch family {
             case .systemMedium:
                 mediumContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             case .systemLarge:
                 largeContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             case .accessoryRectangular:
                 accessoryContent
             default:
