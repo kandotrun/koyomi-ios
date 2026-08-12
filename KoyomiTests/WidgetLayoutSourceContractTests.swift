@@ -4,17 +4,20 @@ import XCTest
 final class WidgetLayoutSourceContractTests: XCTestCase {
     func testMediumAndLargeListsFillAvailableHeightFromTopLeading() throws {
         let source = try widgetSource()
+        let normalizedSource = source
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
 
         XCTAssertTrue(
-            source.contains("mediumContent\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)"),
+            normalizedSource.contains("case .systemMedium: mediumContent .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)"),
             "Medium Widgetは余剰高さがある場合も一覧を上詰めにする"
         )
         XCTAssertTrue(
-            source.contains("largeContent\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)"),
+            normalizedSource.contains("case .systemLarge: largeContent .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)"),
             "Large Widgetは余剰高さがある場合も一覧を上詰めにする"
         )
         XCTAssertFalse(
-            source.contains("accessoryContent\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)"),
+            normalizedSource.contains("case .accessoryRectangular: accessoryContent .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)"),
             "ロック画面向けWidgetの中央配置は維持する"
         )
     }
