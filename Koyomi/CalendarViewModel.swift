@@ -20,25 +20,40 @@ final class CalendarViewModel: ObservableObject {
 
     private let source: CalendarEventSource
     private let pinStore: PinnedEventsStore
+    private let legacyPinStore: PinnedEventsStore?
     private let calendarSelectionStore: CalendarSelectionStore
     private let calendar: Calendar
     private let now: () -> Date
+    private let cachedDeepLinkPinsByID: [String: PinnedEvent]
     private var loadedInterval: DateInterval?
+    private var pendingDeepLinkedEventID: String?
+    private var pendingDeepLinkedPin: PinnedEvent?
+    private var editablePinIDs: Set<String> = []
 
     init(
         source: CalendarEventSource,
         pinStore: PinnedEventsStore,
+        legacyPinStore: PinnedEventsStore? = nil,
         calendarSelectionStore: CalendarSelectionStore,
         calendar: Calendar = .current,
         now: @escaping () -> Date = Date.init
     ) {
         self.source = source
         self.pinStore = pinStore
+        self.legacyPinStore = legacyPinStore
         self.calendarSelectionStore = calendarSelectionStore
         self.calendar = calendar
         self.now = now
+        let cachedPins = PinnedRecurrenceExpander.expandedPins(
+            from: pinStore.load(),
+            at: now(),
+            calendar: calendar
+        )
+        cachedDeepLinkPinsByID = cachedPins.reduce(into: [:]) { result, pin in
+            result[pin.id] = pin
+        }
         authorizationStatus = source.authorizationStatus
-        pinnedEvents = pinStore.load()
+        pinnedEvents = []
         selectedDate = calendar.startOfDay(for: now())
     }
 
@@ -103,7 +118,6 @@ final class CalendarViewModel: ObservableObject {
 
     func bootstrap() {
         authorizationStatus = source.authorizationStatus
-        pinnedEvents = pinStore.load()
         WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
         if authorizationStatus == .fullAccess {
             refresh()
@@ -118,7 +132,11 @@ final class CalendarViewModel: ObservableObject {
             authorizationStatus = source.authorizationStatus
             if authorizationStatus == .fullAccess {
                 refreshAvailableCalendars()
-                reloadAllEventWindows()
+                let migration = migrateLegacyPins()
+                reloadAllEventWindows(additionalPinCandidates: migration.pinCandidates)
+                if !migration.succeeded, errorMessage == nil {
+                    errorMessage = "以前のピンの一部をCalendarへ移行できませんでした。"
+                }
             }
         } catch {
             errorMessage = "カレンダーへのアクセスを確認できませんでした。"
@@ -132,7 +150,11 @@ final class CalendarViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         refreshAvailableCalendars()
-        reloadAllEventWindows()
+        let migration = migrateLegacyPins()
+        reloadAllEventWindows(additionalPinCandidates: migration.pinCandidates)
+        if !migration.succeeded, errorMessage == nil {
+            errorMessage = "以前のピンの一部をCalendarへ移行できませんでした。"
+        }
     }
 
     func selectDate(_ date: Date) {
@@ -176,45 +198,78 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func isPinned(_ event: CalendarEvent) -> Bool {
-        pinnedEvents.contains { $0.id == event.pinnedSnapshot.id }
+        event.isPinned
     }
 
-    func togglePin(_ event: CalendarEvent) {
+    func isPinEditable(_ pin: PinnedEvent) -> Bool {
+        editablePinIDs.contains(pin.id)
+    }
+
+    @discardableResult
+    func togglePin(
+        _ event: CalendarEvent,
+        scope: CalendarMutationScope
+    ) -> CalendarEvent? {
+        let updated: CalendarEvent
         do {
-            pinnedEvents = try pinStore.toggle(event.pinnedSnapshot)
-            WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
+            updated = try source.setPinned(event, pinned: !event.isPinned, scope: scope)
         } catch {
-            errorMessage = "ピン留めを保存できませんでした。"
+            errorMessage = managementErrorMessage(for: error, action: "変更")
+            return nil
         }
+
+        applyLocalReplacement(of: event, with: updated)
+        errorMessage = nil
+        do {
+            try reloadAllEventWindowsOrThrow(additionalPinCandidates: [updated])
+        } catch {
+            errorMessage = "ピン留めはCalendarへ保存しましたが、一覧またはWidgetの同期を完了できませんでした。"
+        }
+        return updated
     }
 
-    func removePin(_ pin: PinnedEvent) {
+    func removePin(_ pin: PinnedEvent, scope: CalendarMutationScope) {
+        let event = event(for: pin)
+        guard event.canEdit else {
+            errorMessage = "対象の予定をCalendarから再取得できませんでした。"
+            return
+        }
+        let updated: CalendarEvent
         do {
-            pinnedEvents = try pinStore.remove(id: pin.id)
-            WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
+            updated = try source.setPinned(event, pinned: false, scope: scope)
         } catch {
-            errorMessage = "ピン留めを解除できませんでした。"
+            errorMessage = managementErrorMessage(for: error, action: "変更")
+            return
+        }
+
+        applyLocalReplacement(of: event, with: updated)
+        errorMessage = nil
+        do {
+            try reloadAllEventWindowsOrThrow(additionalPinCandidates: [updated])
+        } catch {
+            errorMessage = "ピン留めはCalendarから解除しましたが、一覧またはWidgetの同期を完了できませんでした。"
         }
     }
 
     @discardableResult
     func createItem(_ draft: CalendarItemDraft) -> CalendarEvent? {
         do {
-            let created = try source.createItem(draft)
+            var created = try source.createItem(draft)
             applyLocalCreation(created)
             var postSaveIssue = false
             errorMessage = nil
             if draft.dateMode == .estimatedWindow, !isPinned(created) {
                 do {
-                    pinnedEvents = try pinStore.toggle(created.pinnedSnapshot)
-                    WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
+                    let pinned = try source.setPinned(created, pinned: true, scope: .thisEvent)
+                    applyLocalReplacement(of: created, with: pinned)
+                    created = pinned
                 } catch {
                     postSaveIssue = true
                 }
             }
             do {
                 try ensureCalendarVisible(created.calendarID)
-                try reloadAllEventWindowsOrThrow()
+                try reloadAllEventWindowsOrThrow(additionalPinCandidates: [created])
             } catch {
                 postSaveIssue = true
             }
@@ -248,9 +303,8 @@ final class CalendarViewModel: ObservableObject {
         applyLocalReplacement(of: event, with: updated)
         errorMessage = nil
         do {
-            try replacePinIfNeeded(for: event, with: updated)
             try ensureCalendarVisible(updated.calendarID)
-            try reloadAllEventWindowsOrThrow()
+            try reloadAllEventWindowsOrThrow(additionalPinCandidates: [updated])
         } catch {
             errorMessage = "予定は保存しましたが、ピンまたは一覧の同期を完了できませんでした。"
         }
@@ -274,9 +328,8 @@ final class CalendarViewModel: ObservableObject {
         applyLocalReplacement(of: event, with: updated)
         errorMessage = nil
         do {
-            try replacePinIfNeeded(for: event, with: updated)
             try ensureCalendarVisible(updated.calendarID)
-            try reloadAllEventWindowsOrThrow()
+            try reloadAllEventWindowsOrThrow(additionalPinCandidates: [updated])
         } catch {
             errorMessage = "タスクは更新しましたが、ピンまたは一覧の同期を完了できませんでした。"
         }
@@ -298,7 +351,6 @@ final class CalendarViewModel: ObservableObject {
         reconcileSelectedTag()
         errorMessage = nil
         do {
-            try removePinsIfNeeded(for: event, scope: scope)
             try reloadAllEventWindowsOrThrow()
         } catch {
             errorMessage = "予定は削除しましたが、ピンまたは一覧の同期を完了できませんでした。"
@@ -338,6 +390,9 @@ final class CalendarViewModel: ObservableObject {
             calendarName: pin.calendarName,
             calendarColorHex: pin.calendarColorHex,
             location: pin.location,
+            recurrence: pin.recurrence,
+            recurrenceTimeZoneIdentifier: pin.recurrenceTimeZoneIdentifier,
+            isRecurring: pin.recurrence != nil,
             canEdit: false
         )
     }
@@ -345,16 +400,200 @@ final class CalendarViewModel: ObservableObject {
     func open(_ url: URL) {
         guard url.scheme == "koyomi", url.host == "event" else { return }
         let id = url.pathComponents.dropFirst().joined(separator: "/").removingPercentEncoding ?? ""
+        guard !id.isEmpty else { return }
+        if selectDeepLinkedEvent(id: id) {
+            pendingDeepLinkedEventID = nil
+            pendingDeepLinkedPin = nil
+        } else {
+            pendingDeepLinkedEventID = id
+            pendingDeepLinkedPin = cachedDeepLinkPinsByID[id]
+        }
+    }
+
+    private func selectDeepLinkedEvent(id: String) -> Bool {
         if let event = (events + upcomingEvents).first(where: { $0.id == id }) {
             selectedEvent = event
+            return true
         } else if let pin = pinnedEvents.first(where: { $0.id == id }) {
             selectedEvent = event(for: pin)
+            return true
         }
+        return false
     }
 
     private func refreshAvailableCalendars() {
         calendars = source.availableCalendars
         selectedCalendarIDs = calendarSelectionStore.loadSelection(availableCalendars: calendars)
+    }
+
+    private struct LegacyPinMigrationResult {
+        let succeeded: Bool
+        let pinCandidates: [CalendarEvent]
+    }
+
+    private func migrateLegacyPins() -> LegacyPinMigrationResult {
+        guard let legacyPinStore else {
+            return LegacyPinMigrationResult(succeeded: true, pinCandidates: [])
+        }
+        let legacyPins: [PinnedEvent]
+        do {
+            legacyPins = try legacyPinStore.loadMigrationState()
+        } catch {
+            return LegacyPinMigrationResult(succeeded: false, pinCandidates: [])
+        }
+        guard !legacyPins.isEmpty else {
+            return LegacyPinMigrationResult(succeeded: true, pinCandidates: [])
+        }
+
+        let allCalendarIDs = Set(calendars.map(\.id))
+        guard !allCalendarIDs.isEmpty else {
+            return LegacyPinMigrationResult(succeeded: false, pinCandidates: [])
+        }
+
+        var remaining: [PinnedEvent] = []
+        var eventsToMigrate: [(pin: PinnedEvent, event: CalendarEvent)] = []
+        var pinCandidates: [CalendarEvent] = []
+        var hadUnmigratablePin = false
+        for pin in legacyPins {
+            let event: CalendarEvent
+            switch resolvePinnedEvent(pin, calendarIDs: allCalendarIDs) {
+            case let .resolved(resolved):
+                event = resolved
+            case .missing:
+                continue
+            case .retry:
+                remaining.append(pin)
+                continue
+            }
+            if event.isPinned {
+                pinCandidates.append(event)
+                continue
+            }
+            guard event.canEdit else {
+                hadUnmigratablePin = true
+                continue
+            }
+            eventsToMigrate.append((pin, event))
+        }
+
+        // Consume legacy authority before touching EventKit so a crash cannot leave
+        // a stale local pin that later resurrects a Calendar-side removal. A confirmed
+        // pre-commit failure is re-queued below only after checking the postcondition.
+        do {
+            try legacyPinStore.saveMigrationState(remaining)
+        } catch {
+            return LegacyPinMigrationResult(succeeded: false, pinCandidates: [])
+        }
+
+        var failedMigrationPins: [PinnedEvent] = []
+        for migration in eventsToMigrate {
+            do {
+                let updated = try source.setPinned(
+                    migration.event,
+                    pinned: true,
+                    scope: .thisEvent
+                )
+                pinCandidates.append(updated)
+            } catch {
+                switch resolvePinnedEvent(migration.pin, calendarIDs: allCalendarIDs) {
+                case let .resolved(current) where current.isPinned:
+                    pinCandidates.append(current)
+                default:
+                    hadUnmigratablePin = true
+                    failedMigrationPins.append(migration.pin)
+                }
+            }
+        }
+        if !failedMigrationPins.isEmpty {
+            remaining.append(contentsOf: failedMigrationPins)
+            do {
+                try legacyPinStore.saveMigrationState(remaining)
+            } catch {
+                return LegacyPinMigrationResult(succeeded: false, pinCandidates: pinCandidates)
+            }
+        }
+        return LegacyPinMigrationResult(
+            succeeded: remaining.isEmpty && !hadUnmigratablePin,
+            pinCandidates: pinCandidates
+        )
+    }
+
+    private enum PinnedEventResolution {
+        case resolved(CalendarEvent)
+        case missing
+        case retry
+    }
+
+    private func resolvePinnedEvent(
+        _ pin: PinnedEvent,
+        calendarIDs: Set<String>
+    ) -> PinnedEventResolution {
+        let exactInterval = DateInterval(
+            start: pin.startDate.addingTimeInterval(-1),
+            end: max(pin.endDate, pin.startDate).addingTimeInterval(1)
+        )
+        let occurrenceCandidates: [CalendarEvent]
+        do {
+            occurrenceCandidates = try source.events(in: exactInterval, calendarIDs: calendarIDs)
+        } catch {
+            return .retry
+        }
+        let exactCandidates = occurrenceCandidates.filter { $0.id == pin.id }
+        if exactCandidates.count == 1 {
+            return .resolved(exactCandidates[0])
+        }
+        if exactCandidates.count > 1 {
+            return .retry
+        }
+
+        let eventIdentifier = pin.eventIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        let externalIdentifier = pin.externalIdentifier?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !externalIdentifier.isEmpty {
+            let externalMatches = occurrenceCandidates.filter {
+                $0.externalIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    == externalIdentifier
+                    && abs($0.startDate.timeIntervalSince(pin.startDate)) < 1
+            }
+            if externalMatches.count == 1 {
+                return .resolved(externalMatches[0])
+            }
+            if externalMatches.count > 1 {
+                return .retry
+            }
+        }
+        guard !eventIdentifier.isEmpty || !externalIdentifier.isEmpty else { return .missing }
+        let tolerance: TimeInterval = 7 * 86_400
+        let nearbyInterval = DateInterval(
+            start: pin.startDate.addingTimeInterval(-tolerance - 1),
+            end: max(pin.endDate, pin.startDate).addingTimeInterval(tolerance + 1)
+        )
+        let nearbyCandidates: [CalendarEvent]
+        do {
+            nearbyCandidates = try source.events(in: nearbyInterval, calendarIDs: calendarIDs)
+                .filter {
+                    // Recurring siblings can share an EventKit identifier. After an
+                    // exact miss, treating one as a moved occurrence can pin the wrong day.
+                    !$0.isRecurring
+                        && ((!eventIdentifier.isEmpty && $0.eventIdentifier == eventIdentifier)
+                            || (!externalIdentifier.isEmpty
+                                && $0.externalIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    == externalIdentifier))
+                        && abs($0.startDate.timeIntervalSince(pin.startDate)) <= tolerance
+                }
+        } catch {
+            return .retry
+        }
+        guard let nearestDistance = nearbyCandidates.map({
+            abs($0.startDate.timeIntervalSince(pin.startDate))
+        }).min() else {
+            return .missing
+        }
+        let nearest = nearbyCandidates.filter {
+            abs(abs($0.startDate.timeIntervalSince(pin.startDate)) - nearestDistance) < 0.001
+        }
+        guard nearest.count == 1 else { return .retry }
+        return .resolved(nearest[0])
     }
 
     private func ensureCalendarVisible(_ calendarID: String) throws {
@@ -375,16 +614,18 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    private func reloadAllEventWindows() {
+    private func reloadAllEventWindows(additionalPinCandidates: [CalendarEvent] = []) {
         do {
-            try reloadAllEventWindowsOrThrow()
+            try reloadAllEventWindowsOrThrow(additionalPinCandidates: additionalPinCandidates)
             errorMessage = nil
         } catch {
             errorMessage = "予定を読み込めませんでした。"
         }
     }
 
-    private func reloadAllEventWindowsOrThrow() throws {
+    private func reloadAllEventWindowsOrThrow(
+        additionalPinCandidates: [CalendarEvent] = []
+    ) throws {
         guard
             let selectedInterval = CalendarLoadWindow.interval(around: selectedDate, calendar: calendar),
             let upcomingInterval = CalendarLoadWindow.interval(
@@ -392,6 +633,10 @@ final class CalendarViewModel: ObservableObject {
                 calendar: calendar,
                 monthsBefore: 6,
                 monthsAfter: 18
+            ),
+            let pinDiscoveryInterval = CalendarPin.discoveryInterval(
+                around: now(),
+                calendar: calendar
             )
         else { throw CalendarEventSourceError.invalidDraft }
 
@@ -403,20 +648,20 @@ final class CalendarViewModel: ObservableObject {
             in: upcomingInterval,
             calendarIDs: selectedCalendarIDs
         )
-        let reconciledPins = PinnedEventReconciler.reconcile(
-            pins: pinnedEvents,
-            with: selectedEvents + futureEvents
+        let pinCandidates = try source.events(
+            in: pinDiscoveryInterval,
+            calendarIDs: Set(calendars.map(\.id))
         )
-        if reconciledPins != pinnedEvents {
-            try pinStore.save(reconciledPins)
-        }
 
         events = selectedEvents
         upcomingEvents = futureEvents
         loadedInterval = selectedInterval
-        pinnedEvents = reconciledPins
+        try replacePinnedSnapshots(
+            with: selectedEvents + pinCandidates + additionalPinCandidates,
+            recurrenceValidationInterval: pinDiscoveryInterval
+        )
         reconcileSelectedTag()
-        WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
+        resolvePendingDeepLinkIfPossible()
     }
 
     private func loadSelectedEventWindow() {
@@ -428,19 +673,86 @@ final class CalendarViewModel: ObservableObject {
             events = try source.events(in: interval, calendarIDs: selectedCalendarIDs)
             loadedInterval = interval
             reconcileSelectedTag()
-            try reconcilePins(with: events + upcomingEvents)
+            try reloadPinnedSnapshots(additionalCandidates: events)
             errorMessage = nil
         } catch {
             errorMessage = "予定を読み込めませんでした。"
         }
     }
 
-    private func reconcilePins(with candidates: [CalendarEvent]) throws {
-        let reconciled = PinnedEventReconciler.reconcile(pins: pinnedEvents, with: candidates)
-        guard reconciled != pinnedEvents else { return }
-        try pinStore.save(reconciled)
-        pinnedEvents = reconciled
+    private func reloadPinnedSnapshots(additionalCandidates: [CalendarEvent]) throws {
+        guard let interval = CalendarPin.discoveryInterval(
+            around: now(),
+            calendar: calendar
+        ) else { throw CalendarEventSourceError.invalidDraft }
+        let pinCandidates = try source.events(
+            in: interval,
+            calendarIDs: Set(calendars.map(\.id))
+        )
+        try replacePinnedSnapshots(
+            with: additionalCandidates + pinCandidates,
+            recurrenceValidationInterval: interval
+        )
+    }
+
+    private func replacePinnedSnapshots(
+        with candidates: [CalendarEvent],
+        recurrenceValidationInterval: DateInterval
+    ) throws {
+        var authoritativeCandidates = candidates
+        let candidateIDs = Set(candidates.map(\.id))
+        let allCalendarIDs = Set(calendars.map(\.id))
+
+        if !allCalendarIDs.isEmpty {
+            for cachedPin in pinStore.load() where !candidateIDs.contains(cachedPin.id) {
+                switch resolvePinnedEvent(
+                    cachedPin,
+                    calendarIDs: allCalendarIDs
+                ) {
+                case let .resolved(event):
+                    authoritativeCandidates.append(event)
+                case .missing:
+                    continue
+                case .retry:
+                    throw CalendarEventSourceError.unsupported
+                }
+            }
+        }
+
+        let snapshots = CalendarPin.snapshots(
+            from: authoritativeCandidates,
+            at: now(),
+            recurrenceValidationInterval: recurrenceValidationInterval,
+            calendar: calendar
+        )
+        editablePinIDs = Set(
+            authoritativeCandidates
+                .filter { $0.isPinned && $0.canEdit }
+                .map { $0.pinnedSnapshot.id }
+        )
+        pinnedEvents = snapshots
+        try pinStore.save(snapshots)
         WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
+    }
+
+    private func resolvePendingDeepLinkIfPossible() {
+        guard let id = pendingDeepLinkedEventID else { return }
+        let cachedPin = pendingDeepLinkedPin
+        pendingDeepLinkedEventID = nil
+        pendingDeepLinkedPin = nil
+        if selectDeepLinkedEvent(id: id) { return }
+
+        let allCalendarIDs = Set(calendars.map(\.id))
+        guard
+            let cachedPin,
+            !allCalendarIDs.isEmpty,
+            case let .resolved(event) = resolvePinnedEvent(
+                cachedPin,
+                calendarIDs: allCalendarIDs
+            ),
+            event.isPinned
+        else { return }
+        selectedEvent = event
     }
 
     private func reveal(_ event: CalendarEvent) {
@@ -486,35 +798,6 @@ final class CalendarViewModel: ObservableObject {
         if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
         if lhs.endDate != rhs.endDate { return lhs.endDate < rhs.endDate }
         return lhs.id < rhs.id
-    }
-
-    private func replacePinIfNeeded(
-        for original: CalendarEvent,
-        with updated: CalendarEvent
-    ) throws {
-        guard let index = pinnedEvents.firstIndex(where: { $0.id == original.pinnedSnapshot.id }) else {
-            return
-        }
-        var pins = pinnedEvents
-        pins[index] = updated.pinnedSnapshot
-        try pinStore.save(pins)
-        pinnedEvents = pins
-        WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
-    }
-
-    private func removePinsIfNeeded(
-        for event: CalendarEvent,
-        scope: CalendarMutationScope
-    ) throws {
-        let pins = PinnedEventDeletionPolicy.remainingPins(
-            afterDeleting: event,
-            scope: scope,
-            from: pinnedEvents
-        )
-        guard pins != pinnedEvents else { return }
-        try pinStore.save(pins)
-        pinnedEvents = pins
-        WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
     }
 
     private func managementErrorMessage(for error: Error, action: String) -> String {

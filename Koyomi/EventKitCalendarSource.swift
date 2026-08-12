@@ -149,6 +149,28 @@ final class EventKitCalendarSource: CalendarEventSource {
         return Self.calendarEvent(from: stored)
     }
 
+    func setPinned(
+        _ event: CalendarEvent,
+        pinned: Bool,
+        scope: CalendarMutationScope
+    ) throws -> CalendarEvent {
+        let stored = try storedEvent(matching: event)
+        try validateCurrentRevision(stored, against: event)
+        guard stored.calendar.allowsContentModifications else {
+            throw CalendarEventSourceError.readOnlyCalendar
+        }
+        let span = try eventKitSpan(scope, for: stored)
+        stored.title = EventTitleTagMutator.applying(
+            EventTitleTagChange(
+                adding: pinned ? [CalendarPin.tag] : [],
+                removing: pinned ? [] : [CalendarPin.tag]
+            ),
+            to: stored.title ?? ""
+        )
+        try eventStore.save(stored, span: span, commit: true)
+        return Self.calendarEvent(from: stored)
+    }
+
     func deleteItem(_ event: CalendarEvent, scope: CalendarMutationScope) throws {
         let stored = try storedEvent(matching: event)
         try validateCurrentRevision(stored, against: event)
@@ -333,6 +355,7 @@ final class EventKitCalendarSource: CalendarEventSource {
             recurrence: recurrenceRules.first.map {
                 recurrence(from: $0, isOnlyRule: recurrenceRules.count == 1)
             },
+            recurrenceTimeZoneIdentifier: event.timeZone?.identifier,
             isRecurring: event.hasRecurrenceRules,
             canEdit: event.calendar.allowsContentModifications
                 && (!eventIdentifier.isEmpty || externalIdentifier?.isEmpty == false),

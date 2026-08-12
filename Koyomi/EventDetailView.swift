@@ -6,14 +6,16 @@ struct EventDetailView: View {
     @State private var event: CalendarEvent
     @State private var editorContext: CalendarItemEditorContext?
     @State private var isDeleteConfirmationPresented = false
+    @State private var isPinScopePresented = false
     @State private var isCompletionScopePresented = false
     @State private var pendingCompletion = false
     @State private var completionUndoAction: CalendarCompletionUndoAction?
     @State private var mutationError: String?
 
     let calendars: [CalendarDescriptor]
+    let availableTags: [String]
     let isPinned: (CalendarEvent) -> Bool
-    let onTogglePin: (CalendarEvent) -> Void
+    let onTogglePin: (CalendarEvent, CalendarMutationScope) -> CalendarEvent?
     let onUpdate: (CalendarEvent, CalendarItemDraft, CalendarMutationScope) -> CalendarEvent?
     let onDuplicate: (CalendarItemDraft) -> CalendarEvent?
     let onSetTaskCompleted: (CalendarEvent, Bool, CalendarMutationScope) -> CalendarEvent?
@@ -22,8 +24,9 @@ struct EventDetailView: View {
     init(
         event: CalendarEvent,
         calendars: [CalendarDescriptor],
+        availableTags: [String] = [],
         isPinned: @escaping (CalendarEvent) -> Bool,
-        onTogglePin: @escaping (CalendarEvent) -> Void,
+        onTogglePin: @escaping (CalendarEvent, CalendarMutationScope) -> CalendarEvent?,
         onUpdate: @escaping (CalendarEvent, CalendarItemDraft, CalendarMutationScope) -> CalendarEvent?,
         onDuplicate: @escaping (CalendarItemDraft) -> CalendarEvent?,
         onSetTaskCompleted: @escaping (CalendarEvent, Bool, CalendarMutationScope) -> CalendarEvent?,
@@ -31,6 +34,7 @@ struct EventDetailView: View {
     ) {
         _event = State(initialValue: event)
         self.calendars = calendars
+        self.availableTags = availableTags
         self.isPinned = isPinned
         self.onTogglePin = onTogglePin
         self.onUpdate = onUpdate
@@ -74,31 +78,33 @@ struct EventDetailView: View {
                         }
                     }
 
-                    if isPinned(event) {
-                        Button {
-                            KoyomiHaptics.perform(.togglePin)
-                            onTogglePin(event)
-                        } label: {
-                            Label("ピン留めを解除", systemImage: "pin.slash.fill")
-                                .frame(maxWidth: .infinity)
+                    if event.canEdit {
+                        if isPinned(event) {
+                            Button {
+                                togglePin()
+                            } label: {
+                                Label("ピン留めを解除", systemImage: "pin.slash.fill")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.glass)
+                            .tint(.primary)
+                            .accessibilityIdentifier("event-detail-pin-toggle")
+                        } else {
+                            Button {
+                                togglePin()
+                            } label: {
+                                Label(
+                                    event.managementKind == .task
+                                        ? "このタスクをピン留め"
+                                        : "この予定をピン留め",
+                                    systemImage: "pin.fill"
+                                )
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.glass)
+                            .tint(tint)
+                            .accessibilityIdentifier("event-detail-pin-toggle")
                         }
-                        .buttonStyle(.glass)
-                        .tint(.primary)
-                    } else {
-                        Button {
-                            KoyomiHaptics.perform(.togglePin)
-                            onTogglePin(event)
-                        } label: {
-                            Label(
-                                event.managementKind == .task
-                                    ? "このタスクをピン留め"
-                                    : "この予定をピン留め",
-                                systemImage: "pin.fill"
-                            )
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.glass)
-                        .tint(tint)
                     }
 
                     if event.canEdit {
@@ -134,8 +140,8 @@ struct EventDetailView: View {
                     } else {
                         Label(
                             event.calendarID.isEmpty
-                                ? "予定の最新情報を読み込めないため、現在は閲覧とピン解除のみ利用できます。"
-                                : "このCalendarは読み取り専用です。閲覧とピン留めのみ利用できます。",
+                                ? "予定の最新情報を読み込めないため、現在は閲覧のみ利用できます。"
+                                : "このCalendarは読み取り専用です。閲覧のみ利用できます。",
                             systemImage: event.calendarID.isEmpty ? "exclamationmark.triangle.fill" : "lock.fill"
                         )
                         .font(.footnote)
@@ -180,6 +186,7 @@ struct EventDetailView: View {
                 CalendarItemEditorSheet(
                     context: context,
                     calendars: calendars,
+                    availableTags: availableTags,
                     selectedDate: event.startDate
                 ) { draft, scope in
                     switch context.purpose {
@@ -211,6 +218,15 @@ struct EventDetailView: View {
                         delete(scope: .thisEvent)
                     }
                 }
+                Button("キャンセル", role: .cancel) {}
+            }
+            .confirmationDialog(
+                "ピン留めを変更する範囲",
+                isPresented: $isPinScopePresented,
+                titleVisibility: .visible
+            ) {
+                Button("この予定のみ") { togglePin(scope: .thisEvent) }
+                Button("これ以降すべて") { togglePin(scope: .futureEvents) }
                 Button("キャンセル", role: .cancel) {}
             }
             .confirmationDialog(
@@ -312,6 +328,24 @@ struct EventDetailView: View {
         }
         .padding(22)
         .koyomiGlass(tint: tint, cornerRadius: 30)
+    }
+
+    private func togglePin() {
+        KoyomiHaptics.perform(.togglePin)
+        if event.isRecurring {
+            isPinScopePresented = true
+        } else {
+            togglePin(scope: .thisEvent)
+        }
+    }
+
+    private func togglePin(scope: CalendarMutationScope) {
+        guard let updated = onTogglePin(event, scope) else {
+            mutationError = "ピン留めを変更できませんでした。予定の最新状態を確認してください。"
+            return
+        }
+        event = updated
+        mutationError = nil
     }
 
     private func requestCompletionChange(_ completed: Bool) {

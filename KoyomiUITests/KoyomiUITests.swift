@@ -156,6 +156,118 @@ final class KoyomiUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["プロジェクト発表"].exists, "removing one pin must keep the other pin")
     }
 
+    func testDetailPinToggleUsesTheLatestCalendarRevision() {
+        let app = launchDemo()
+        let dentist = app.staticTexts["歯科検診"]
+        XCTAssertTrue(dentist.waitForExistence(timeout: 5))
+        dentist.tap()
+
+        let pin = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND label CONTAINS %@",
+                "event-detail-pin-toggle",
+                "この予定をピン留め"
+            )
+        ).firstMatch
+        XCTAssertTrue(pin.waitForExistence(timeout: 2))
+        pin.tap()
+
+        let unpin = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@ AND label CONTAINS %@",
+                "event-detail-pin-toggle",
+                "ピン留めを解除"
+            )
+        ).firstMatch
+        XCTAssertTrue(unpin.waitForExistence(timeout: 2))
+        unpin.tap()
+
+        XCTAssertTrue(pin.waitForExistence(timeout: 2))
+    }
+
+    func testRecurringPinChangeAsksForOccurrenceScope() {
+        let app = launchDemo(additionalArguments: ["-ui-testing-recurring-pin"])
+        let recurringRow = app.buttons["agenda-event-demo-daily-pin"]
+        XCTAssertTrue(scrollToExistence(recurringRow, in: app))
+        recurringRow.tap()
+
+        let toggle = app.buttons["event-detail-pin-toggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 2))
+        toggle.tap()
+
+        XCTAssertTrue(app.staticTexts["ピン留めを変更する範囲"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["この予定のみ"].exists)
+        XCTAssertTrue(app.buttons["これ以降すべて"].exists)
+        XCTAssertTrue(toggle.exists, "範囲を選ぶまではCalendarを変更しない")
+    }
+
+    func testRecurringExpandedPinRemovalAsksForOccurrenceScope() {
+        let app = launchDemo(additionalArguments: ["-ui-testing-recurring-pin"])
+        let section = app.buttons["pinned-section-toggle"]
+        XCTAssertTrue(section.waitForExistence(timeout: 5))
+        section.tap()
+
+        let pinScroll = app.scrollViews["pinned-cards-scroll"]
+        XCTAssertTrue(pinScroll.waitForExistence(timeout: 2))
+        let remove = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                "pin-remove-",
+                "毎日の確認"
+            )
+        ).firstMatch
+        for _ in 0..<6 where !remove.exists {
+            pinScroll.swipeLeft()
+        }
+        XCTAssertTrue(remove.waitForExistence(timeout: 2))
+        remove.tap()
+
+        XCTAssertTrue(app.staticTexts["ピン留めを変更する範囲"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["この予定のみ"].exists)
+        XCTAssertTrue(app.buttons["これ以降すべて"].exists)
+        XCTAssertTrue(remove.exists, "範囲を選ぶまではCalendarを変更しない")
+    }
+
+    func testDetailPinFailureAppearsInsideTheDetailSheet() {
+        let app = launchDemo(additionalArguments: ["-ui-testing-fail-mutations"])
+        let dentist = app.staticTexts["歯科検診"]
+        XCTAssertTrue(dentist.waitForExistence(timeout: 5))
+        dentist.tap()
+
+        let pin = app.buttons["event-detail-pin-toggle"]
+        XCTAssertTrue(pin.waitForExistence(timeout: 2))
+        pin.tap()
+
+        let alert = app.alerts["操作を完了できませんでした"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 2))
+        XCTAssertTrue(alert.staticTexts["ピン留めを変更できませんでした。予定の最新状態を確認してください。"].exists)
+    }
+
+    func testReadOnlyPinnedEventDoesNotExposeImpossiblePinControls() {
+        let app = launchDemo(additionalArguments: ["-ui-testing-read-only-pin"])
+        let dentist = app.staticTexts["歯科検診"]
+        XCTAssertTrue(dentist.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["agenda-pin-demo-dentist"].exists)
+
+        let dentistAgendaRow = app.buttons["agenda-event-demo-dentist"]
+        XCTAssertTrue(dentistAgendaRow.exists)
+        dentistAgendaRow.tap()
+        XCTAssertFalse(app.buttons["event-detail-pin-toggle"].exists)
+        XCTAssertTrue(app.staticTexts["このCalendarは読み取り専用です。閲覧のみ利用できます。"].exists)
+        app.buttons["閉じる"].tap()
+
+        app.buttons["pinned-section-toggle"].tap()
+        XCTAssertFalse(
+            app.buttons.matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                    "pin-remove-",
+                    "歯科検診"
+                )
+            ).firstMatch.exists
+        )
+    }
+
     func testCalendarFilterCanHideOneDeviceCalendar() {
         let app = launchDemo()
         let filterButton = app.buttons["display-options"]
@@ -232,6 +344,133 @@ final class KoyomiUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["見込み期間"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.staticTexts["中心の目安"].exists)
         attachScreenshot(of: app, name: "Estimated task window")
+    }
+
+    func testTagEditorUsesSuggestionsAndRemovableChips() {
+        let app = launchDemo()
+        app.buttons["add-calendar-item"].tap()
+        app.buttons["予定を追加"].tap()
+
+        let title = app.textFields["calendar-item-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 2))
+        title.tap()
+        title.typeText("家族でランチ")
+
+        let workSuggestion = app.buttons["calendar-item-tag-suggestion-仕事"]
+        XCTAssertTrue(scrollToExistence(workSuggestion, in: app))
+        let suggestionRail = app.scrollViews["calendar-item-tag-suggestions-scroll"]
+        XCTAssertTrue(suggestionRail.exists)
+        XCTAssertLessThanOrEqual(
+            suggestionRail.frame.height,
+            56,
+            "候補は縦に肥大化せず1段で横スクロールできる"
+        )
+        workSuggestion.tap()
+
+        let selectedWork = app.buttons["calendar-item-tag-selected-仕事"]
+        XCTAssertTrue(selectedWork.waitForExistence(timeout: 2))
+        XCTAssertEqual(selectedWork.value as? String, "選択中")
+        XCTAssertTrue(app.staticTexts["タップで外す"].exists)
+
+        let input = app.textFields["calendar-item-tag-input"]
+        XCTAssertTrue(input.exists)
+        let addTag = app.buttons["calendar-item-tag-add"]
+        XCTAssertFalse(addTag.isEnabled)
+        XCTAssertEqual(addTag.value as? String, "タグ名を入力")
+        XCTAssertGreaterThanOrEqual(addTag.frame.height, 44)
+        input.tap()
+        input.typeText("家族")
+        XCTAssertTrue(addTag.isEnabled)
+        XCTAssertEqual(addTag.value as? String, "追加できます")
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 2))
+        XCTAssertLessThanOrEqual(
+            addTag.frame.maxY,
+            keyboard.frame.minY,
+            "キーボード表示中も追加ボタン全体をタップできる"
+        )
+        addTag.tap()
+        XCTAssertTrue(app.buttons["calendar-item-tag-selected-家族"].waitForExistence(timeout: 2))
+
+        selectedWork.tap()
+        XCTAssertTrue(selectedWork.waitForNonExistence(timeout: 2))
+        XCTAssertTrue(workSuggestion.waitForExistence(timeout: 2), "外したタグは候補からすぐ戻せる")
+
+        let selectedFamily = app.buttons["calendar-item-tag-selected-家族"]
+        let navigationBar = app.navigationBars.firstMatch
+        XCTAssertTrue(navigationBar.exists)
+        XCTAssertGreaterThanOrEqual(
+            selectedFamily.frame.minY,
+            navigationBar.frame.maxY + 4,
+            "キーボードを閉じた後も選択済みタグがtoolbarの下へ潜らない"
+        )
+        attachScreenshot(of: app, name: "Tag editor chips")
+
+        app.buttons["save-calendar-item"].tap()
+        let created = app.staticTexts["家族でランチ"]
+        XCTAssertTrue(created.waitForExistence(timeout: 3))
+        created.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["event-tag-chip-家族"].waitForExistence(timeout: 2))
+    }
+
+    func testTagEditorKeepsLongTagsInsideTheScreenAtAccessibilityTextSize() {
+        let app = launchDemo(
+            additionalArguments: [
+                "-UIPreferredContentSizeCategoryName",
+                "UICTContentSizeCategoryAccessibilityXXXL"
+            ]
+        )
+        app.buttons["add-calendar-item"].tap()
+        app.buttons["予定を追加"].tap()
+
+        let input = app.textFields["calendar-item-tag-input"]
+        XCTAssertTrue(scrollToExistence(input, in: app))
+        input.tap()
+        input.typeText("とても長いプロジェクト名でも安全に編集できるタグ")
+        app.buttons["calendar-item-tag-add"].tap()
+
+        let chip = app.buttons["calendar-item-tag-selected-とても長いプロジェクト名でも安全に編集できるタグ"]
+        XCTAssertTrue(chip.waitForExistence(timeout: 2))
+        XCTAssertGreaterThan(
+            chip.frame.height,
+            44,
+            "Accessibility XXXLでは44pt固定ではなく、文字の実寸に合わせて縦へ拡張する"
+        )
+        XCTAssertGreaterThanOrEqual(chip.frame.minX, app.windows.firstMatch.frame.minX + 16)
+        XCTAssertLessThanOrEqual(chip.frame.maxX, app.windows.firstMatch.frame.maxX - 16)
+    }
+
+    func testCompletionTagMovesToVisibleTaskStateWhenKindChanges() {
+        let app = launchDemo()
+        app.buttons["add-calendar-item"].tap()
+        app.buttons["予定を追加"].tap()
+
+        let title = app.textFields["calendar-item-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 2))
+        title.tap()
+        title.typeText("完了済みの記録")
+
+        let input = app.textFields["calendar-item-tag-input"]
+        XCTAssertTrue(scrollToExistence(input, in: app))
+        input.tap()
+        input.typeText("完了")
+        app.buttons["calendar-item-tag-add"].tap()
+        XCTAssertTrue(app.buttons["calendar-item-tag-selected-完了"].waitForExistence(timeout: 2))
+
+        let taskKind = app.segmentedControls.buttons["タスク"]
+        for _ in 0..<6 where !taskKind.isHittable {
+            app.swipeDown()
+        }
+        XCTAssertTrue(taskKind.isHittable)
+        taskKind.tap()
+
+        let completed = app.switches["完了"]
+        XCTAssertTrue(completed.waitForExistence(timeout: 2), "完了状態を専用Toggleで確認できる")
+        XCTAssertEqual(completed.value as? String, "1")
+        XCTAssertTrue(app.buttons["calendar-item-tag-selected-完了"].waitForNonExistence(timeout: 2))
+
+        app.segmentedControls.buttons["予定"].tap()
+        XCTAssertTrue(scrollToExistence(app.buttons["calendar-item-tag-selected-完了"], in: app))
     }
 
     func testCreatesCompletesAndUndoesTask() {

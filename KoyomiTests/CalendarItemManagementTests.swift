@@ -136,39 +136,6 @@ struct CalendarItemManagementTests {
         #expect(CalendarRecurrenceAccessibility.selectionValue(isSelected: true) == "選択済み")
     }
 
-    @Test("これ以降の削除は同じseriesの境界以降のピンだけを除く")
-    func removesFuturePinsForDeletedRecurringSeries() {
-        let current = makeEvent(title: "定例 #仕事")
-        var past = current
-        past.startDate = current.startDate.addingTimeInterval(-86_400)
-        past.endDate = current.endDate.addingTimeInterval(-86_400)
-        past.id = EventOccurrenceID.make(
-            eventIdentifier: past.eventIdentifier,
-            externalIdentifier: past.externalIdentifier,
-            startDate: past.startDate
-        )
-        var future = current
-        future.startDate = current.startDate.addingTimeInterval(86_400)
-        future.endDate = current.endDate.addingTimeInterval(86_400)
-        future.id = EventOccurrenceID.make(
-            eventIdentifier: future.eventIdentifier,
-            externalIdentifier: future.externalIdentifier,
-            startDate: future.startDate
-        )
-        let unrelated = makeEvent(title: "別の予定 #仕事")
-        var unrelatedPin = unrelated.pinnedSnapshot
-        unrelatedPin.id = "unrelated"
-        unrelatedPin.eventIdentifier = "other-series"
-        unrelatedPin.externalIdentifier = "other-external"
-
-        let remaining = PinnedEventDeletionPolicy.remainingPins(
-            afterDeleting: current,
-            scope: .futureEvents,
-            from: [past.pinnedSnapshot, current.pinnedSnapshot, future.pinnedSnapshot, unrelatedPin]
-        )
-
-        #expect(remaining.map(\.id) == [past.pinnedSnapshot.id, unrelatedPin.id])
-    }
 
     @Test("日跨ぎ予定は開始日と終了日の両方を表示する")
     func summarizesMultiDayTimedEvent() throws {
@@ -416,6 +383,145 @@ struct CalendarItemManagementTests {
         )
 
         #expect(title == "旅行を予約 #タスク #重要 #旅行")
+    }
+
+    @Test("タグ編集は貼り付け入力を正規化して表記揺れを重複させない")
+    func normalizesTagsAddedFromEditorInput() {
+        let updated = CalendarTagEditorPolicy.adding(
+            input: " #仕事、＃家族  #ＡＩ, #仕事 ",
+            to: ["個人", "ai"]
+        )
+
+        #expect(updated == ["個人", "ai", "仕事", "家族"])
+        #expect(CalendarTagEditorPolicy.removing("ＡＩ", from: updated) == ["個人", "仕事", "家族"])
+    }
+
+    @Test("タグ候補は定番とCalendar既存タグをまとめて選択済みと管理タグを除く")
+    func suggestsReusableCustomTags() {
+        let suggestions = CalendarTagEditorPolicy.suggestions(
+            availableTags: ["タスク", "旅行", "仕事", "旅行", "重要"],
+            selectedTags: ["仕事"],
+            excludedTags: ["タスク", "重要", "完了", "見込み"]
+        )
+
+        #expect(suggestions == ["個人", "家族", "メモ", "ピン", "旅行"])
+    }
+
+    @Test("専用項目で管理するタグは自由入力から追加せずピンはCalendarタグとして扱う")
+    func rejectsEditorManagedTagsFromCustomInput() {
+        let updated = CalendarTagEditorPolicy.adding(
+            input: "#タスク #重要 #完了 #見込み #ピン #家族",
+            to: [],
+            excludedTags: ["タスク", "重要", "完了", "見込み"]
+        )
+
+        #expect(updated == ["ピン", "家族"])
+        #expect(
+            !CalendarTagEditorPolicy.canAdd(
+                input: "#重要",
+                to: [],
+                excludedTags: ["タスク", "重要"]
+            )
+        )
+    }
+
+    @Test("句読点付きの管理タグも保存後の解釈と同じ規則で自由入力から除外する")
+    func rejectsPunctuatedEditorManagedTagsFromCustomInput() {
+        let updated = CalendarTagEditorPolicy.adding(
+            input: "#タスク。 #重要！ #完了, #見込み； #家族。",
+            to: [],
+            excludedTags: ["タスク", "重要", "完了", "見込み"]
+        )
+
+        #expect(updated == ["家族"])
+        #expect(
+            !CalendarTagEditorPolicy.canAdd(
+                input: "#タスク。 #重要！",
+                to: [],
+                excludedTags: ["タスク", "重要"]
+            )
+        )
+    }
+
+    @Test("文脈上は管理状態にならない完了・見込みタグをカスタム入力できる")
+    func keepsContextualManagementTagsAvailableAsCustomTags() {
+        #expect(
+            CalendarTagEditorPolicy.excludedTags(kind: .event, dateMode: .exact)
+                == ["タスク", "重要"]
+        )
+        #expect(
+            CalendarTagEditorPolicy.excludedTags(kind: .task, dateMode: .exact)
+                == ["タスク", "重要", "完了"]
+        )
+        #expect(
+            CalendarTagEditorPolicy.excludedTags(kind: .task, dateMode: .estimatedWindow)
+                == ["タスク", "重要", "完了", "見込み"]
+        )
+        let ordinaryEventTags = CalendarTagEditorPolicy.adding(
+            input: "#完了 #見込み #重要",
+            to: [],
+            excludedTags: ["タスク", "重要"]
+        )
+        let exactTaskTags = CalendarTagEditorPolicy.adding(
+            input: "#完了 #見込み",
+            to: [],
+            excludedTags: ["タスク", "重要", "完了"]
+        )
+
+        #expect(ordinaryEventTags == ["完了", "見込み"])
+        #expect(exactTaskTags == ["見込み"])
+    }
+
+    @Test("管理タグは専用UI中だけ隠しCalendar由来のタグ自体は保持する")
+    func hidesManagedTagsWithoutDestroyingCalendarTags() {
+        let selected = ["完了", "見込み", "家族"]
+
+        #expect(
+            CalendarTagEditorPolicy.visibleTags(
+                selected,
+                excluding: ["タスク", "重要"]
+            ) == selected
+        )
+        #expect(
+            CalendarTagEditorPolicy.visibleTags(
+                selected,
+                excluding: ["タスク", "重要", "完了"]
+            ) == ["見込み", "家族"]
+        )
+        #expect(
+            CalendarTagEditorPolicy.visibleTags(
+                selected,
+                excluding: ["タスク", "重要", "完了", "見込み"]
+            ) == ["家族"]
+        )
+        #expect(selected == ["完了", "見込み", "家族"])
+    }
+
+    @Test("完了タグと完了状態は予定・タスク切替で意味を失わず相互移行する")
+    func carriesCompletionMeaningAcrossKindChanges() {
+        let task = CalendarTagEditorPolicy.completionState(
+            tags: ["完了", "家族"],
+            isCompleted: false,
+            kind: .task
+        )
+        #expect(task.tags == ["家族"])
+        #expect(task.isCompleted)
+
+        let event = CalendarTagEditorPolicy.completionState(
+            tags: ["家族"],
+            isCompleted: true,
+            kind: .event
+        )
+        #expect(event.tags == ["家族", "完了"])
+        #expect(!event.isCompleted)
+
+        let reopenedTask = CalendarTagEditorPolicy.completionState(
+            tags: event.tags,
+            isCompleted: event.isCompleted,
+            kind: .task
+        )
+        #expect(reopenedTask.tags == ["家族"])
+        #expect(reopenedTask.isCompleted)
     }
 
     private func makeEvent(title: String) -> CalendarEvent {

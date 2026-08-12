@@ -14,7 +14,7 @@ WIDGET_ID = "run.kan.koyomi.widget"
 KEYCHAIN_ACCESS_GROUP = "$(AppIdentifierPrefix)run.kan.koyomi.shared"
 SIGNED_KEYCHAIN_ACCESS_GROUP = f"{TEAM_ID}.run.kan.koyomi.shared"
 SUPPORTED_INTERFACE_ORIENTATIONS = ["UIInterfaceOrientationPortrait"]
-EXPECTED_BUILD_NUMBER = "3"
+EXPECTED_BUILD_NUMBER = "4"
 EXPECTED_WIDGET_FAMILIES = (
     ".supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])"
 )
@@ -75,9 +75,13 @@ def main() -> None:
     assert project.count(KEYCHAIN_ACCESS_GROUP) == 2
 
     app_dependencies = (ROOT / "Koyomi/AppDependencies.swift").read_text(encoding="utf-8")
+    shared_storage = (ROOT / "Shared/PinnedEvent.swift").read_text(encoding="utf-8")
     widget_source = (ROOT / "KoyomiWidget/KoyomiWidget.swift").read_text(encoding="utf-8")
-    assert "storage: KeychainPinnedEventsDataStorage()" in app_dependencies
-    assert "migrationStorage: UserDefaultsPinnedEventsDataStorage(defaults: .standard)" in app_dependencies
+    assert "pinStore: PinnedEventsStore(storage: KeychainPinnedEventsDataStorage())" in app_dependencies
+    assert "account: KoyomiSharedStorage.legacyPinnedEventsKey" in app_dependencies
+    assert "key: KoyomiSharedStorage.legacyPinnedEventsKey" in app_dependencies
+    assert 'pinnedEventSnapshotsKey = "pinned-event-snapshots-v2"' in shared_storage
+    assert 'legacyPinnedEventsKey = "pinned-events-v1"' in shared_storage
     assert "PinnedEventsStore(storage: KeychainPinnedEventsDataStorage())" in widget_source
     assert EXPECTED_WIDGET_FAMILIES in widget_source, (
         "the widget must advertise Small, Medium, Large, and accessory rectangular families"

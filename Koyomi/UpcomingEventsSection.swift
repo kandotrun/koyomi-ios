@@ -50,7 +50,7 @@ struct UpcomingEventsSection: View {
                                         },
                                         onTogglePin: {
                                             KoyomiHaptics.perform(.togglePin)
-                                            model.togglePin(event)
+                                            model.togglePin(event, scope: $0)
                                         }
                                     )
                                     .accessibilityIdentifier("upcoming-event-\(event.eventIdentifier)")

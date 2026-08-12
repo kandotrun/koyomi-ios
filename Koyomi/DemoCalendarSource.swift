@@ -10,7 +10,9 @@ final class DemoCalendarSource: CalendarEventSource {
     init(
         referenceDate: Date = .now,
         calendar: Calendar = .current,
-        shouldFailMutations: Bool = false
+        shouldFailMutations: Bool = false,
+        hasReadOnlyPinnedEvent: Bool = false,
+        hasRecurringPinnedEvent: Bool = false
     ) {
         self.shouldFailMutations = shouldFailMutations
         let personal = CalendarDescriptor(
@@ -18,7 +20,7 @@ final class DemoCalendarSource: CalendarEventSource {
             title: "個人",
             sourceName: "iCloud",
             colorHex: "21A179",
-            allowsContentModifications: true
+            allowsContentModifications: !hasReadOnlyPinnedEvent
         )
         let work = CalendarDescriptor(
             id: "demo-work",
@@ -44,7 +46,8 @@ final class DemoCalendarSource: CalendarEventSource {
             end: Date,
             isAllDay: Bool = false,
             calendar descriptor: CalendarDescriptor,
-            location: String? = nil
+            location: String? = nil,
+            recurrence: CalendarRecurrenceRule? = nil
         ) -> CalendarEvent {
             let eventIdentifier = "demo-\(key)"
             let externalIdentifier = "demo-external-\(key)"
@@ -64,13 +67,15 @@ final class DemoCalendarSource: CalendarEventSource {
                 calendarName: descriptor.title,
                 calendarColorHex: descriptor.colorHex,
                 location: location,
-                canEdit: true
+                recurrence: recurrence,
+                isRecurring: recurrence != nil,
+                canEdit: descriptor.allowsContentModifications
             )
         }
 
         let project = make(
             "project",
-            title: "プロジェクト発表 #仕事 #重要",
+            title: "プロジェクト発表 #仕事 #重要 #ピン",
             start: date(tomorrow, hour: 10),
             end: date(tomorrow, hour: 11, minute: 30),
             calendar: work,
@@ -94,7 +99,7 @@ final class DemoCalendarSource: CalendarEventSource {
         )
         let dentist = make(
             "dentist",
-            title: "歯科検診 #個人",
+            title: hasReadOnlyPinnedEvent ? "歯科検診 #個人 #ピン" : "歯科検診 #個人",
             start: date(today, hour: 14),
             end: date(today, hour: 15),
             calendar: personal,
@@ -123,7 +128,19 @@ final class DemoCalendarSource: CalendarEventSource {
             location: "ブルガリア"
         )
 
+        let recurringPin = make(
+            "daily-pin",
+            title: "毎日の確認 #個人 #ピン",
+            start: referenceDate.addingTimeInterval(-15 * 60),
+            end: referenceDate.addingTimeInterval(45 * 60),
+            calendar: personal,
+            recurrence: CalendarRecurrenceRule(frequency: .daily)
+        )
+
         allEvents = [allDay, focus, dentist, project, travel, engraving]
+        if hasRecurringPinnedEvent {
+            allEvents.append(recurringPin)
+        }
         seededPin = project.pinnedSnapshot
     }
 
@@ -245,6 +262,29 @@ final class DemoCalendarSource: CalendarEventSource {
             EventTitleTagChange(
                 adding: completed ? ["完了"] : [],
                 removing: completed ? [] : ["完了"]
+            ),
+            to: updated.title
+        )
+        updated.lastModifiedDate = .now
+        allEvents[index] = updated
+        return updated
+    }
+
+    func setPinned(
+        _ event: CalendarEvent,
+        pinned: Bool,
+        scope: CalendarMutationScope
+    ) throws -> CalendarEvent {
+        if shouldFailMutations { throw CalendarEventSourceError.unsupported }
+        guard scope == .thisEvent || event.isRecurring else {
+            throw CalendarEventSourceError.futureScopeUnavailable
+        }
+        let index = try exactIndex(for: event)
+        var updated = allEvents[index]
+        updated.title = EventTitleTagMutator.applying(
+            EventTitleTagChange(
+                adding: pinned ? [CalendarPin.tag] : [],
+                removing: pinned ? [] : [CalendarPin.tag]
             ),
             to: updated.title
         )

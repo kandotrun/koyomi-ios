@@ -35,7 +35,7 @@ struct AgendaSection: View {
                             },
                             onTogglePin: {
                                 KoyomiHaptics.perform(.togglePin)
-                                model.togglePin(event)
+                                model.togglePin(event, scope: $0)
                             }
                         )
                     }
@@ -53,8 +53,9 @@ struct AgendaEventRow: View {
     let event: CalendarEvent
     let isPinned: Bool
     let onOpen: () -> Void
-    let onTogglePin: () -> Void
+    let onTogglePin: (CalendarMutationScope) -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var isPinScopePresented = false
 
     private var tint: Color { Color(koyomiHex: event.calendarColorHex) }
     private var metadata: EventTitleMetadata { event.titleMetadata }
@@ -80,22 +81,41 @@ struct AgendaEventRow: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("agenda-event-\(event.eventIdentifier)")
 
-            Button(action: onTogglePin) {
-                Image(systemName: isPinned ? "pin.slash.fill" : "pin")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(isPinned ? tint : Color.primary.opacity(0.74))
-                    .frame(width: 44, height: 44)
+            if event.canEdit {
+                Button(action: requestPinChange) {
+                    Image(systemName: isPinned ? "pin.slash.fill" : "pin")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(isPinned ? tint : Color.primary.opacity(0.74))
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(
+                    isPinned
+                        ? "\(metadata.displayTitle)のピン留めを解除"
+                        : "\(metadata.displayTitle)をピン留め"
+                )
+                .accessibilityIdentifier("agenda-pin-\(event.eventIdentifier)")
             }
-            .accessibilityLabel(
-                isPinned
-                    ? "\(metadata.displayTitle)のピン留めを解除"
-                    : "\(metadata.displayTitle)をピン留め"
-            )
-            .accessibilityIdentifier("agenda-pin-\(event.eventIdentifier)")
         }
         .padding(12)
         .frame(minHeight: 72)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .confirmationDialog(
+            "ピン留めを変更する範囲",
+            isPresented: $isPinScopePresented,
+            titleVisibility: .visible
+        ) {
+            Button("この予定のみ") { onTogglePin(.thisEvent) }
+            Button("これ以降すべて") { onTogglePin(.futureEvents) }
+            Button("キャンセル", role: .cancel) {}
+        }
+    }
+
+    private func requestPinChange() {
+        if event.isRecurring {
+            isPinScopePresented = true
+        } else {
+            onTogglePin(.thisEvent)
+        }
     }
 
     @ViewBuilder

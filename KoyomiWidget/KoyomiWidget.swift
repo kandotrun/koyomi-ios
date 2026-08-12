@@ -19,8 +19,9 @@ struct KoyomiWidgetProvider: TimelineProvider {
     func getSnapshot(in context: Context, completion: @escaping (KoyomiWidgetEntry) -> Void) {
         let now = Date()
         let allPins = store.load()
+        let timelinePins = PinnedRecurrenceExpander.expandedPins(from: allPins, at: now)
         let pins = WidgetPinSelector.activePins(
-            from: allPins,
+            from: timelinePins,
             at: now,
             limit: pinLimit(for: context.family)
         )
@@ -31,7 +32,7 @@ struct KoyomiWidgetProvider: TimelineProvider {
                 pins: usesPlaceholder ? [Self.placeholderPin] : pins,
                 totalActivePinCount: usesPlaceholder
                     ? 1
-                    : WidgetPinSelector.activePinCount(from: allPins, at: now)
+                    : WidgetPinSelector.activePinCount(from: timelinePins, at: now)
             )
         )
     }
@@ -39,8 +40,9 @@ struct KoyomiWidgetProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<KoyomiWidgetEntry>) -> Void) {
         let now = Date()
         let allPins = store.load()
+        let timelinePins = PinnedRecurrenceExpander.expandedPins(from: allPins, at: now)
         let states = WidgetTimelinePlanner.states(
-            from: allPins,
+            from: timelinePins,
             at: now,
             limit: pinLimit(for: context.family)
         )
@@ -49,7 +51,7 @@ struct KoyomiWidgetProvider: TimelineProvider {
                 date: $0.date,
                 pins: $0.pins,
                 totalActivePinCount: WidgetPinSelector.activePinCount(
-                    from: allPins,
+                    from: timelinePins,
                     at: $0.date
                 )
             )

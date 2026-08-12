@@ -15,6 +15,7 @@ public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
     public var notes: String?
     public var alarmOffsets: [TimeInterval]
     public var recurrence: CalendarRecurrenceRule?
+    public var recurrenceTimeZoneIdentifier: String?
     public var isRecurring: Bool
     public var canEdit: Bool
     public var lastModifiedDate: Date?
@@ -34,6 +35,7 @@ public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
         notes: String? = nil,
         alarmOffsets: [TimeInterval] = [],
         recurrence: CalendarRecurrenceRule? = nil,
+        recurrenceTimeZoneIdentifier: String? = nil,
         isRecurring: Bool = false,
         canEdit: Bool = false,
         lastModifiedDate: Date? = nil
@@ -52,6 +54,7 @@ public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
         self.notes = notes
         self.alarmOffsets = alarmOffsets
         self.recurrence = recurrence
+        self.recurrenceTimeZoneIdentifier = recurrenceTimeZoneIdentifier
         self.isRecurring = isRecurring
         self.canEdit = canEdit
         self.lastModifiedDate = lastModifiedDate
@@ -72,7 +75,13 @@ public struct CalendarEvent: Codable, Equatable, Identifiable, Sendable {
             isAllDay: isAllDay,
             calendarName: calendarName,
             calendarColorHex: calendarColorHex,
-            location: location
+            location: location,
+            recurrence: isRecurring ? recurrence : nil,
+            recurrenceTimeZoneIdentifier: isRecurring ? recurrenceTimeZoneIdentifier : nil,
+            recurrenceSeriesIdentifier: isRecurring
+                ? CalendarPin.recurringSeriesIdentity(for: self)
+                : nil,
+            recurrenceAnchorDate: isRecurring ? startDate : nil
         )
     }
 }

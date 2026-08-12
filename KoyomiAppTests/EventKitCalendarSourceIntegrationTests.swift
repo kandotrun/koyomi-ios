@@ -40,8 +40,32 @@ final class EventKitCalendarSourceIntegrationTests: XCTestCase {
         XCTAssertEqual(created.alarmOffsets, [-900])
         XCTAssertTrue(created.canEdit)
 
+        let pinned = try source.setPinned(created, pinned: true, scope: .thisEvent)
+        XCTAssertTrue(pinned.isPinned)
+        XCTAssertTrue(pinned.titleMetadata.containsTag("未知タグ"))
+
+        let pinnedDraft = CalendarItemDraft(pinned)
+        XCTAssertTrue(pinnedDraft.tags.contains(where: {
+            EventTitleMetadata.normalize($0) == EventTitleMetadata.normalize(CalendarPin.tag)
+        }))
+        let editedWhilePinned = try source.updateItem(
+            pinned,
+            with: pinnedDraft,
+            scope: .thisEvent
+        )
+        XCTAssertTrue(editedWhilePinned.isPinned)
+        XCTAssertTrue(editedWhilePinned.titleMetadata.containsTag("未知タグ"))
+
+        let unpinned = try source.setPinned(
+            editedWhilePinned,
+            pinned: false,
+            scope: .thisEvent
+        )
+        XCTAssertFalse(unpinned.isPinned)
+        XCTAssertTrue(unpinned.titleMetadata.containsTag("未知タグ"))
+
         let completed = try source.setTaskCompletion(
-            created,
+            unpinned,
             completed: true,
             scope: .thisEvent
         )
@@ -181,15 +205,16 @@ final class EventKitCalendarSourceIntegrationTests: XCTestCase {
         try store.save(rawEvent, span: .thisEvent, commit: true)
 
         let source = EventKitCalendarSource(eventStore: store)
-        let loaded = try XCTUnwrap(
-            try source.events(
-                in: DateInterval(start: start.addingTimeInterval(-60), end: endDate),
-                calendarIDs: [calendar.calendarIdentifier]
-            ).first
+        let loadedOccurrences = try source.events(
+            in: DateInterval(start: start.addingTimeInterval(-60), end: endDate),
+            calendarIDs: [calendar.calendarIdentifier]
         )
+        let loaded = try XCTUnwrap(loadedOccurrences.first)
 
         XCTAssertNotNil(loaded.recurrence?.endDate)
         XCTAssertNil(loaded.recurrence?.occurrenceCount)
+        XCTAssertGreaterThan(loadedOccurrences.count, 1)
+        XCTAssertTrue(loadedOccurrences.allSatisfy(\.isRecurring))
     }
 
     func testEstimatedWindowRoundTripsThroughEventKit() async throws {
@@ -258,6 +283,7 @@ final class EventKitCalendarSourceIntegrationTests: XCTestCase {
         rawEvent.title = "第2火曜の定例"
         rawEvent.startDate = start
         rawEvent.endDate = start.addingTimeInterval(3_600)
+        rawEvent.timeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
         rawEvent.recurrenceRules = [
             EKRecurrenceRule(
                 recurrenceWith: .monthly,
@@ -284,6 +310,8 @@ final class EventKitCalendarSourceIntegrationTests: XCTestCase {
             ).first
         )
         XCTAssertEqual(loaded.recurrence?.isFullyRepresentable, false)
+        XCTAssertEqual(loaded.recurrenceTimeZoneIdentifier, "America/Los_Angeles")
+        XCTAssertEqual(loaded.pinnedSnapshot.recurrenceTimeZoneIdentifier, "America/Los_Angeles")
 
         var draft = CalendarItemDraft(loaded)
         draft.notes = "メモだけ変更"
@@ -375,5 +403,68 @@ final class EventKitCalendarSourceIntegrationTests: XCTestCase {
         XCTAssertFalse(refreshed[0].isCompletedTask)
         XCTAssertTrue(refreshed[1].isCompletedTask)
         XCTAssertTrue(refreshed[2].isCompletedTask)
+    }
+
+    func testDetachedRecurringExceptionDisablesWidgetSynthesis() async throws {
+        let store = EKEventStore()
+        let granted = try await store.requestFullAccessToEvents()
+        try XCTSkipUnless(granted, "Calendar full access is required")
+
+        let calendar = EKCalendar(for: .event, eventStore: store)
+        calendar.title = "Koyomi Detached Recurrence \(UUID().uuidString)"
+        calendar.source = try XCTUnwrap(
+            store.sources.first(where: { $0.sourceType == .local })
+                ?? store.defaultCalendarForNewEvents?.source
+        )
+        try store.saveCalendar(calendar, commit: true)
+        defer { try? store.removeCalendar(calendar, commit: true) }
+
+        let dateCalendar = Calendar(identifier: .gregorian)
+        let start = try XCTUnwrap(dateCalendar.date(
+            bySettingHour: 9,
+            minute: 0,
+            second: 0,
+            of: Date().addingTimeInterval(86_400)
+        ))
+        let rawEvent = EKEvent(eventStore: store)
+        rawEvent.calendar = calendar
+        rawEvent.title = "毎日の確認 #ピン"
+        rawEvent.startDate = start
+        rawEvent.endDate = start.addingTimeInterval(3_600)
+        rawEvent.recurrenceRules = [
+            EKRecurrenceRule(recurrenceWith: .daily, interval: 1, end: nil)
+        ]
+        try store.save(rawEvent, span: .thisEvent, commit: true)
+
+        let interval = DateInterval(
+            start: start,
+            end: try XCTUnwrap(dateCalendar.date(byAdding: .day, value: 5, to: start))
+        )
+        let predicate = store.predicateForEvents(
+            withStart: interval.start,
+            end: interval.end,
+            calendars: [calendar]
+        )
+        let rawOccurrences = store.events(matching: predicate).sorted {
+            $0.startDate < $1.startDate
+        }
+        XCTAssertEqual(rawOccurrences.count, 5)
+        rawOccurrences[2].title = "個別に解除した予定"
+        try store.save(rawOccurrences[2], span: .thisEvent, commit: true)
+
+        let source = EventKitCalendarSource(eventStore: store)
+        let occurrences = try source.events(
+            in: interval,
+            calendarIDs: [calendar.calendarIdentifier]
+        )
+        let snapshots = CalendarPin.snapshots(
+            from: occurrences,
+            at: start.addingTimeInterval(-1),
+            recurrenceValidationInterval: interval,
+            calendar: dateCalendar
+        )
+
+        XCTAssertFalse(snapshots.isEmpty)
+        XCTAssertTrue(snapshots.allSatisfy { $0.recurrenceValidatedThroughDate == nil })
     }
 }

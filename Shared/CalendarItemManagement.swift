@@ -659,62 +659,11 @@ public enum EventTitleTagMutator {
     }
 
     static func canonicalTag(_ candidate: String) -> String? {
-        var value = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        while value.first == "#" {
-            value.removeFirst()
-        }
-        guard !value.isEmpty, !value.contains(where: \.isWhitespace) else { return nil }
-        return value
+        EventTitleTagGrammar.canonicalTag(candidate)
     }
 
-    private struct ParsedTagToken {
-        let tag: String
-        let suffix: String
-    }
-
-    private static func parsedTagToken(in token: String) -> ParsedTagToken? {
-        guard token.first == "#" else { return nil }
-        let punctuation = CharacterSet(charactersIn: "、。,.!?！？:：;；)]}）】」』…")
-        var tag = String(token.dropFirst())
-        var suffix = ""
-        while let last = tag.last,
-              last.unicodeScalars.allSatisfy({ punctuation.contains($0) }) {
-            suffix.insert(last, at: suffix.startIndex)
-            tag.removeLast()
-        }
-        guard !tag.isEmpty else { return nil }
-        return ParsedTagToken(tag: tag, suffix: suffix)
-    }
-}
-
-public enum PinnedEventDeletionPolicy {
-    public static func remainingPins(
-        afterDeleting event: CalendarEvent,
-        scope: CalendarMutationScope,
-        from pins: [PinnedEvent]
-    ) -> [PinnedEvent] {
-        switch scope {
-        case .thisEvent:
-            return pins.filter { $0.id != event.pinnedSnapshot.id }
-        case .futureEvents:
-            return pins.filter { pin in
-                guard pin.startDate >= event.startDate else { return true }
-                return !belongsToSameSeries(pin, as: event)
-            }
-        }
-    }
-
-    private static func belongsToSameSeries(_ pin: PinnedEvent, as event: CalendarEvent) -> Bool {
-        let eventIdentifier = event.eventIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !eventIdentifier.isEmpty, pin.eventIdentifier == eventIdentifier {
-            return true
-        }
-        guard let externalIdentifier = event.externalIdentifier?.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        ), !externalIdentifier.isEmpty else {
-            return false
-        }
-        return pin.externalIdentifier == externalIdentifier
+    private static func parsedTagToken(in token: String) -> EventTitleTagGrammar.ParsedToken? {
+        EventTitleTagGrammar.parsePersistedToken(token)
     }
 }
 

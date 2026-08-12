@@ -17,6 +17,11 @@ protocol CalendarEventSource: AnyObject {
         completed: Bool,
         scope: CalendarMutationScope
     ) throws -> CalendarEvent
+    func setPinned(
+        _ event: CalendarEvent,
+        pinned: Bool,
+        scope: CalendarMutationScope
+    ) throws -> CalendarEvent
     func deleteItem(_ event: CalendarEvent, scope: CalendarMutationScope) throws
 }
 
