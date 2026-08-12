@@ -196,15 +196,15 @@ private struct PinnedSummaryRow: View {
     let onOpen: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var tint: Color { Color(koyomiHex: pin.calendarColorHex) }
     private var metadata: EventTitleMetadata { pin.titleMetadata }
     private var refreshInterval: TimeInterval { pin.isEstimatedDateWindow ? 3_600 : 60 }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: refreshInterval)) { context in
             let countdown = CountdownCalculator.compactText(for: pin, now: context.date)
+            let proximity = CountdownProximityCalculator.state(for: pin, now: context.date)
             Button(action: onOpen) {
-                summaryContent(countdown: countdown)
+                summaryContent(countdown: countdown, proximity: proximity)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
                 .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
@@ -212,22 +212,31 @@ private struct PinnedSummaryRow: View {
             }
             .buttonStyle(.plain)
             .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .accessibilityLabel("\(metadata.displayTitle)、\(countdown)、\(pin.koyomiDateText)")
+            .accessibilityLabel(
+                "\(metadata.displayTitle)、\(countdown)、\(pin.koyomiDateText)、\(proximity.accessibilityDescription)"
+            )
             .accessibilityHint("ダブルタップして詳細を開く")
             .accessibilityIdentifier("pin-summary-\(pin.id)")
         }
     }
 
     @ViewBuilder
-    private func summaryContent(countdown: String) -> some View {
+    private func summaryContent(
+        countdown: String,
+        proximity: CountdownProximityState
+    ) -> some View {
         if KoyomiResponsiveLayout.usesVerticalCardLayout(for: dynamicTypeSize) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .fill(tint)
-                        .frame(width: 4)
+                    CountdownProximityMeter(
+                        state: proximity,
+                        orientation: .vertical,
+                        activeColor: proximity.tone.koyomiColor,
+                        trackColor: Color.primary.opacity(0.50),
+                        spacing: 3
+                    )
+                        .frame(width: 6)
                         .frame(maxHeight: .infinity)
-                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 5) {
                         Text(metadata.displayTitle)
@@ -247,10 +256,14 @@ private struct PinnedSummaryRow: View {
             }
         } else {
             HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(tint)
-                    .frame(width: 4, height: 46)
-                    .accessibilityHidden(true)
+                CountdownProximityMeter(
+                    state: proximity,
+                    orientation: .vertical,
+                    activeColor: proximity.tone.koyomiColor,
+                    trackColor: Color.primary.opacity(0.50),
+                    spacing: 3
+                )
+                    .frame(width: 6, height: 46)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(metadata.displayTitle)
@@ -315,6 +328,7 @@ private struct PinnedCountdownCard: View {
 
     private func card(at date: Date) -> some View {
         let presentation = CountdownCalculator.presentation(for: pin, now: date)
+        let proximity = CountdownProximityCalculator.state(for: pin, now: date)
         return Button(action: onOpen) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 12) {
@@ -340,6 +354,7 @@ private struct PinnedCountdownCard: View {
                 }
 
                 countdown(presentation)
+                proximityGraph(proximity)
 
                 HStack(spacing: 8) {
                     Image(
@@ -362,7 +377,7 @@ private struct PinnedCountdownCard: View {
         .buttonStyle(.plain)
         .koyomiGlass(tint: tint, cornerRadius: 24, interactive: true)
         .accessibilityLabel(
-            "\(metadata.displayTitle)、\(pin.calendarName)、\(pin.koyomiDateText)、\(presentation.label) \(presentation.value)"
+            "\(metadata.displayTitle)、\(pin.calendarName)、\(pin.koyomiDateText)、\(presentation.label) \(presentation.value)、\(proximity.accessibilityDescription)"
         )
         .accessibilityHint("ダブルタップして詳細を開く")
         .accessibilityIdentifier("pin-card-\(pin.id)")
@@ -379,6 +394,41 @@ private struct PinnedCountdownCard: View {
                 .contentTransition(.numericText())
                 .accessibilityHidden(true)
         }
+    }
+
+    private func proximityGraph(_ proximity: CountdownProximityState) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("期限の近さ")
+                HStack(spacing: 5) {
+                    Circle()
+                        .fill(proximity.tone.koyomiColor)
+                        .frame(width: 6, height: 6)
+                    Text(proximity.label)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.primary.opacity(0.07), in: Capsule(style: .continuous))
+                Spacer(minLength: 0)
+            }
+            .font(.caption.weight(.semibold))
+
+            CountdownProximityMeter(
+                state: proximity,
+                activeColor: proximity.tone.koyomiColor,
+                trackColor: Color.primary.opacity(0.50)
+            )
+                .frame(height: 14)
+
+            HStack {
+                Text("余裕")
+                Spacer(minLength: 8)
+                Text("間近")
+            }
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.secondary)
+        }
+        .accessibilityHidden(true)
     }
 }
 

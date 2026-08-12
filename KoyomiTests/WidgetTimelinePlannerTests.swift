@@ -111,6 +111,38 @@ final class WidgetTimelinePlannerTests: XCTestCase {
         )
     }
 
+    func testSchedulesDeadlineProximityBandChangesWithoutOpeningTheApp() {
+        let start = now.addingTimeInterval(40 * 86_400)
+        let future = pin(
+            id: "future",
+            start: start,
+            end: start.addingTimeInterval(3_600)
+        )
+
+        let states = WidgetTimelinePlanner.states(
+            from: [future],
+            at: now,
+            limit: 1,
+            transitionOffset: 0
+        )
+
+        XCTAssertEqual(states.map(\.date), [
+            now,
+            start.addingTimeInterval(-30 * 86_400),
+            start.addingTimeInterval(-7 * 86_400),
+            start.addingTimeInterval(-24 * 3_600),
+            start.addingTimeInterval(-3_600),
+            start,
+            future.endDate
+        ])
+        XCTAssertEqual(
+            states.dropLast(2).map {
+                CountdownProximityCalculator.state(for: future, now: $0.date).level
+            },
+            [1, 2, 3, 4, 5]
+        )
+    }
+
     func testContinuesIndefiniteDailySeriesAfterCachedThirtySecondOccurrence() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Tokyo"))

@@ -49,6 +49,10 @@ final class KoyomiUITests: XCTestCase {
         ).firstMatch
 
         XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            summary.label.contains("期限の近さ") && summary.label.contains("5段階中"),
+            "折りたたみ表示でもグラフの意味と段階を読み上げる; label=\(summary.label)"
+        )
         XCTAssertEqual(
             app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "pin-card-")).count,
             0
@@ -60,8 +64,73 @@ final class KoyomiUITests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 2))
         XCTAssertTrue(
-            card.label.contains("あと"),
-            "expanded pin must announce its countdown; label=\(card.label)"
+            card.label.contains("あと")
+                && card.label.contains("期限の近さ")
+                && card.label.contains("5段階中"),
+            "展開カードはカウントダウンとグラフの意味・段階を読み上げる; label=\(card.label)"
+        )
+        attachScreenshot(of: app, name: "Pinned countdown proximity graph")
+    }
+
+    func testPinnedCountdownGraphFitsAccessibilityTextSize() {
+        let app = launchDemo(
+            additionalArguments: [
+                "-UIPreferredContentSizeCategoryName",
+                "UICTContentSizeCategoryAccessibilityXXXL"
+            ]
+        )
+        let summary = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "pin-summary-")
+        ).firstMatch
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(summary.frame.minX, app.windows.firstMatch.frame.minX)
+        XCTAssertLessThanOrEqual(summary.frame.maxX, app.windows.firstMatch.frame.maxX)
+
+        app.buttons["pinned-section-toggle"].tap()
+        let card = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "pin-card-")
+        ).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 2))
+        XCTAssertTrue(card.label.contains("期限の近さ") && card.label.contains("5段階中"))
+        let window = app.windows.firstMatch
+        XCTAssertGreaterThanOrEqual(card.frame.minX, window.frame.minX)
+        XCTAssertLessThanOrEqual(card.frame.maxX, window.frame.maxX)
+
+        XCTAssertLessThanOrEqual(
+            card.frame.height,
+            window.frame.height - 16,
+            "Accessibility XXXLでもカード全体を1画面内で確認できる高さに収める"
+        )
+        let calendarScroll = app.scrollViews["calendar-content-scroll"]
+        XCTAssertTrue(calendarScroll.exists)
+        for _ in 0..<10 where card.frame.maxY > window.frame.maxY - 8 {
+            let overflow = card.frame.maxY - (window.frame.maxY - 8)
+            let distance = min(max(overflow + 4, 24), 120)
+            let start = calendarScroll.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.92, dy: 0.72)
+            )
+            start.press(
+                forDuration: 0.2,
+                thenDragTo: start.withOffset(CGVector(dx: 0, dy: -distance)),
+                withVelocity: .slow,
+                thenHoldForDuration: 0.1
+            )
+        }
+        XCTAssertGreaterThanOrEqual(
+            card.frame.minY,
+            window.frame.minY,
+            "Accessibility XXXLでもカード上端へ戻れないほど大きくしない"
+        )
+        XCTAssertLessThanOrEqual(
+            card.frame.maxY,
+            window.frame.maxY - 8,
+            "Accessibility XXXLでも期限グラフと期限日時を含むカード全体へ到達できる"
+        )
+        attachScreenshot(of: app, name: "Pinned countdown proximity graph Accessibility XXXL")
+
+        XCTAssertTrue(
+            scrollToExistence(app.staticTexts["歯科検診"], in: app),
+            "展開カードの後も今日の予定へスクロールできる"
         )
     }
 
@@ -79,11 +148,17 @@ final class KoyomiUITests: XCTestCase {
             "date picker must announce its action and visible month; label=\(datePicker.label)"
         )
 
-        let tomorrow = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS %@", "8月13日")
+        let otherDate = app.buttons.matching(
+            NSPredicate(
+                format: "label CONTAINS %@ AND label CONTAINS %@ AND label CONTAINS %@ AND NOT label BEGINSWITH %@",
+                "月",
+                "日",
+                "曜日",
+                "今日、"
+            )
         ).firstMatch
-        XCTAssertTrue(tomorrow.waitForExistence(timeout: 2))
-        tomorrow.tap()
+        XCTAssertTrue(otherDate.waitForExistence(timeout: 2), "今日以外の日付セルを選べる")
+        otherDate.tap()
         let today = app.buttons["今日へ移動"]
         XCTAssertTrue(today.waitForExistence(timeout: 2))
         XCTAssertGreaterThanOrEqual(today.frame.height, 44)
