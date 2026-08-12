@@ -20,16 +20,6 @@ final class PinnedEventsStoreTests: XCTestCase {
         super.tearDown()
     }
 
-    func testTogglePersistsAndThenRemovesTheSameOccurrence() throws {
-        let store = PinnedEventsStore(defaults: defaults, key: "pins")
-        let event = makeEvent(id: "dentist@1", start: Date(timeIntervalSince1970: 100))
-
-        XCTAssertEqual(try store.toggle(event), [event])
-        XCTAssertTrue(store.contains(id: event.id))
-
-        XCTAssertEqual(try store.toggle(event), [])
-        XCTAssertFalse(store.contains(id: event.id))
-    }
 
     func testSaveDeduplicatesByOccurrenceAndSortsChronologically() throws {
         let store = PinnedEventsStore(defaults: defaults, key: "pins")
@@ -51,15 +41,6 @@ final class PinnedEventsStoreTests: XCTestCase {
         XCTAssertEqual(store.load(), [])
     }
 
-    func testRemoveIsIdempotent() throws {
-        let store = PinnedEventsStore(defaults: defaults, key: "pins")
-        let event = makeEvent(id: "event-a", start: Date(timeIntervalSince1970: 100))
-        try store.save([event])
-
-        XCTAssertEqual(try store.remove(id: event.id), [])
-        XCTAssertEqual(try store.remove(id: event.id), [])
-        XCTAssertEqual(store.load(), [])
-    }
 
     func testMigratesLegacyStorageWhenPrimaryIsEmpty() throws {
         let primary = InMemoryPinnedEventsDataStorage()
@@ -69,7 +50,7 @@ final class PinnedEventsStoreTests: XCTestCase {
 
         let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
 
-        XCTAssertEqual(migratingStore.load(), [event])
+        XCTAssertEqual(try migratingStore.loadMigrationState(), [event])
         XCTAssertEqual(PinnedEventsStore(storage: primary).load(), [event])
     }
 
@@ -85,6 +66,86 @@ final class PinnedEventsStoreTests: XCTestCase {
 
         XCTAssertEqual(migratingStore.load(), [primaryEvent])
         XCTAssertEqual(PinnedEventsStore(storage: primary).load(), [primaryEvent])
+        XCTAssertEqual(PinnedEventsStore(storage: legacy).load(), [primaryEvent])
+    }
+
+    func testCorruptPrimaryDoesNotOverwriteHealthyMigrationFallback() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let legacyEvent = makeEvent(id: "legacy", start: Date(timeIntervalSince1970: 100))
+        try primary.write(Data("not-json".utf8))
+        try PinnedEventsStore(storage: legacy).save([legacyEvent])
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+
+        XCTAssertEqual(migratingStore.load(), [])
+        XCTAssertEqual(PinnedEventsStore(storage: legacy).load(), [legacyEvent])
+    }
+
+    func testEmptyPrimaryConsumesStaleLegacyFallback() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let stale = makeEvent(id: "stale", start: Date(timeIntervalSince1970: 100))
+        try PinnedEventsStore(storage: primary).save([])
+        try PinnedEventsStore(storage: legacy).save([stale])
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+
+        XCTAssertEqual(try migratingStore.loadMigrationState(), [])
+        XCTAssertEqual(PinnedEventsStore(storage: legacy).load(), [])
+    }
+
+    func testMigrationStateKeepsLegacyFallbackWhenPrimaryWriteFails() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let event = makeEvent(id: "legacy", start: Date(timeIntervalSince1970: 100))
+        try PinnedEventsStore(storage: legacy).save([event])
+        try PinnedEventsStore(storage: primary).save([event])
+        primary.shouldFailWrites = true
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+        XCTAssertEqual(try migratingStore.loadMigrationState(), [event])
+
+        XCTAssertThrowsError(try migratingStore.saveMigrationState([]))
+
+        XCTAssertEqual(PinnedEventsStore(storage: primary).load(), [event])
+        XCTAssertEqual(PinnedEventsStore(storage: legacy).load(), [event])
+    }
+
+    func testMigrationStateKeepsPrimaryWhenFallbackWriteFails() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let event = makeEvent(id: "legacy", start: Date(timeIntervalSince1970: 100))
+        try PinnedEventsStore(storage: primary).save([event])
+        try PinnedEventsStore(storage: legacy).save([event])
+        legacy.shouldFailWrites = true
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+
+        XCTAssertThrowsError(try migratingStore.saveMigrationState([]))
+
+        XCTAssertEqual(PinnedEventsStore(storage: primary).load(), [event])
+        XCTAssertEqual(PinnedEventsStore(storage: legacy).load(), [event])
+    }
+
+    func testFallbackIsNotReturnedUntilItIsPromotedToPrimary() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let event = makeEvent(id: "legacy", start: Date(timeIntervalSince1970: 100))
+        try PinnedEventsStore(storage: legacy).save([event])
+        primary.shouldFailWrites = true
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+
+        XCTAssertThrowsError(try migratingStore.loadMigrationState())
+        XCTAssertEqual(PinnedEventsStore(storage: legacy).load(), [event])
+    }
+
+    func testPrimaryMigrationStateIsNotReturnedWhenFallbackCannotSynchronize() throws {
+        let primary = InMemoryPinnedEventsDataStorage()
+        let legacy = InMemoryPinnedEventsDataStorage()
+        let event = makeEvent(id: "legacy", start: Date(timeIntervalSince1970: 100))
+        try PinnedEventsStore(storage: primary).save([event])
+        legacy.shouldFailWrites = true
+        let migratingStore = PinnedEventsStore(storage: primary, migrationStorage: legacy)
+
+        XCTAssertThrowsError(try migratingStore.loadMigrationState())
+        XCTAssertEqual(PinnedEventsStore(storage: primary).load(), [event])
     }
 
     private func makeEvent(id: String, start: Date) -> PinnedEvent {
@@ -104,8 +165,11 @@ final class PinnedEventsStoreTests: XCTestCase {
 }
 
 private final class InMemoryPinnedEventsDataStorage: PinnedEventsDataStorage, @unchecked Sendable {
+    enum StorageError: Error { case writeFailed }
+
     private let lock = NSLock()
     private var data: Data?
+    var shouldFailWrites = false
 
     func read() throws -> Data? {
         lock.lock()
@@ -116,6 +180,7 @@ private final class InMemoryPinnedEventsDataStorage: PinnedEventsDataStorage, @u
     func write(_ data: Data) throws {
         lock.lock()
         defer { lock.unlock() }
+        if shouldFailWrites { throw StorageError.writeFailed }
         self.data = data
     }
 }

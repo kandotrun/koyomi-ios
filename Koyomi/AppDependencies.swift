@@ -4,6 +4,7 @@ import Foundation
 struct AppDependencies {
     let source: CalendarEventSource
     let pinStore: PinnedEventsStore
+    let legacyPinStore: PinnedEventsStore?
     let calendarSelectionStore: CalendarSelectionStore
 
     static func make() -> AppDependencies {
@@ -14,6 +15,12 @@ struct AppDependencies {
             let source = DemoCalendarSource(
                 shouldFailMutations: ProcessInfo.processInfo.arguments.contains(
                     "-ui-testing-fail-mutations"
+                ),
+                hasReadOnlyPinnedEvent: ProcessInfo.processInfo.arguments.contains(
+                    "-ui-testing-read-only-pin"
+                ),
+                hasRecurringPinnedEvent: ProcessInfo.processInfo.arguments.contains(
+                    "-ui-testing-recurring-pin"
                 )
             )
             let store = PinnedEventsStore(defaults: defaults)
@@ -21,15 +28,22 @@ struct AppDependencies {
             return AppDependencies(
                 source: source,
                 pinStore: store,
+                legacyPinStore: nil,
                 calendarSelectionStore: CalendarSelectionStore(defaults: defaults)
             )
         }
 
         return AppDependencies(
             source: EventKitCalendarSource(),
-            pinStore: PinnedEventsStore(
-                storage: KeychainPinnedEventsDataStorage(),
-                migrationStorage: UserDefaultsPinnedEventsDataStorage(defaults: .standard)
+            pinStore: PinnedEventsStore(storage: KeychainPinnedEventsDataStorage()),
+            legacyPinStore: PinnedEventsStore(
+                storage: KeychainPinnedEventsDataStorage(
+                    account: KoyomiSharedStorage.legacyPinnedEventsKey
+                ),
+                migrationStorage: UserDefaultsPinnedEventsDataStorage(
+                    defaults: .standard,
+                    key: KoyomiSharedStorage.legacyPinnedEventsKey
+                )
             ),
             calendarSelectionStore: CalendarSelectionStore()
         )

@@ -1,5 +1,41 @@
 import Foundation
 
+enum EventTitleTagGrammar {
+    struct ParsedToken {
+        let tag: String
+        let suffix: String
+    }
+
+    private static let trailingPunctuation = CharacterSet(
+        charactersIn: "、。,.!?！？:：;；)]}）】」』…"
+    )
+
+    static func canonicalTag(_ candidate: String) -> String? {
+        var value = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        while value.first == "#" || value.first == "＃" {
+            value.removeFirst()
+        }
+        return splitTrailingPunctuation(from: value)?.tag
+    }
+
+    static func parsePersistedToken(_ token: String) -> ParsedToken? {
+        guard token.first == "#" else { return nil }
+        return splitTrailingPunctuation(from: String(token.dropFirst()))
+    }
+
+    private static func splitTrailingPunctuation(from candidate: String) -> ParsedToken? {
+        var tag = candidate
+        var suffix = ""
+        while let last = tag.last,
+              last.unicodeScalars.allSatisfy({ trailingPunctuation.contains($0) }) {
+            suffix.insert(last, at: suffix.startIndex)
+            tag.removeLast()
+        }
+        guard !tag.isEmpty, !tag.contains(where: \.isWhitespace) else { return nil }
+        return ParsedToken(tag: tag, suffix: suffix)
+    }
+}
+
 public struct EventTitleMetadata: Equatable, Sendable {
     public let displayTitle: String
     public let tags: [String]
@@ -46,15 +82,7 @@ public struct EventTitleMetadata: Equatable, Sendable {
     }
 
     private static func tag(from token: String) -> String? {
-        guard token.first == "#" else { return nil }
-
-        let punctuation = CharacterSet(charactersIn: "、。,.!?！？:：;；)]}）】」』…")
-        var value = String(token.dropFirst())
-        while let last = value.last,
-              last.unicodeScalars.allSatisfy({ punctuation.contains($0) }) {
-            value.removeLast()
-        }
-        return value.isEmpty ? nil : value
+        EventTitleTagGrammar.parsePersistedToken(token)?.tag
     }
 }
 

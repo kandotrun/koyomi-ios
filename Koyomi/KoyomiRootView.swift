@@ -95,8 +95,11 @@ struct KoyomiRootView: View {
                 EventDetailView(
                     event: event,
                     calendars: model.calendars,
+                    availableTags: model.availableTags,
                     isPinned: model.isPinned,
-                    onTogglePin: model.togglePin,
+                    onTogglePin: { event, scope in
+                        model.togglePin(event, scope: scope)
+                    },
                     onUpdate: { event, draft, scope in
                         model.updateItem(event, with: draft, scope: scope)
                     },
@@ -115,6 +118,7 @@ struct KoyomiRootView: View {
                 CalendarItemEditorSheet(
                     context: context,
                     calendars: model.calendars,
+                    availableTags: model.availableTags,
                     selectedDate: model.selectedDate
                 ) { draft, _ in
                     model.createItem(draft)

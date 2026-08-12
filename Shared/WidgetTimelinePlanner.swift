@@ -24,12 +24,13 @@ public enum WidgetTimelinePlanner {
             return [WidgetTimelineState(date: now, pins: [])]
         }
 
-        let visible = WidgetPinSelector.activePins(from: allPins, at: now, limit: limit)
+        let timelinePins = PinnedRecurrenceExpander.expandedPins(from: allPins, at: now)
+        let visible = WidgetPinSelector.activePins(from: timelinePins, at: now, limit: limit)
         var states = [WidgetTimelineState(date: now, pins: visible)]
         let safeTransitionOffset = normalizedTransitionOffset(transitionOffset)
         let safeMaximumEntryCount = max(maximumEntryCount, 1)
         var pendingTransitions = Set(
-            allPins
+            timelinePins
                 .filter { $0.endDate > now && $0.startDate > now }
                 .map(\.startDate)
         )
@@ -53,7 +54,7 @@ public enum WidgetTimelinePlanner {
             let date = transition.addingTimeInterval(safeTransitionOffset)
             guard date > states[states.count - 1].date else { continue }
 
-            let pins = WidgetPinSelector.activePins(from: allPins, at: date, limit: limit)
+            let pins = WidgetPinSelector.activePins(from: timelinePins, at: date, limit: limit)
             states.append(WidgetTimelineState(date: date, pins: pins))
 
             pendingTransitions = Set(pendingTransitions.filter { $0 > date })

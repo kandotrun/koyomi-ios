@@ -31,10 +31,10 @@ struct CalendarItemEditorSheet: View {
 
     let context: CalendarItemEditorContext
     let calendars: [CalendarDescriptor]
+    let availableTags: [String]
     let onSave: (CalendarItemDraft, CalendarMutationScope) -> CalendarEvent?
 
     @State private var draft: CalendarItemDraft
-    @State private var tagsText: String
     @State private var estimatedCenterDate: Date
     @State private var estimatedBufferDays: Int
     @State private var scope: CalendarMutationScope = .thisEvent
@@ -58,6 +58,7 @@ struct CalendarItemEditorSheet: View {
     init(
         context: CalendarItemEditorContext,
         calendars: [CalendarDescriptor],
+        availableTags: [String] = [],
         selectedDate: Date,
         calendar: Calendar = .current,
         now: Date = .now,
@@ -65,6 +66,7 @@ struct CalendarItemEditorSheet: View {
     ) {
         self.context = context
         self.calendars = calendars.filter(\.allowsContentModifications)
+        self.availableTags = availableTags
         self.onSave = onSave
 
         let initial = Self.initialDraft(
@@ -75,7 +77,6 @@ struct CalendarItemEditorSheet: View {
             now: now
         )
         _draft = State(initialValue: initial)
-        _tagsText = State(initialValue: initial.tags.map { "#\($0)" }.joined(separator: " "))
         let initialWindow: CalendarEstimatedWindow?
         switch context.purpose {
         case let .edit(event), let .duplicate(event):
@@ -112,7 +113,8 @@ struct CalendarItemEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            ScrollViewReader { scrollProxy in
+                Form {
                 Section("種類とタイトル") {
                     Picker("種類", selection: $draft.kind) {
                         Label("予定", systemImage: "calendar").tag(ManagedCalendarItemKind.event)
@@ -125,8 +127,9 @@ struct CalendarItemEditorSheet: View {
                         .accessibilityIdentifier("calendar-item-title")
 
                     Toggle("重要", isOn: $draft.isImportant)
-                    if draft.kind == .task, context.originalEvent != nil {
+                    if draft.kind == .task {
                         Toggle("完了", isOn: $draft.isCompleted)
+                            .accessibilityIdentifier("calendar-item-completed")
                     }
                 }
 
@@ -218,12 +221,21 @@ struct CalendarItemEditorSheet: View {
                     }
                 }
 
-                Section("整理") {
-                    TextField("#仕事 #家族（空白またはカンマ区切り）", text: $tagsText)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("calendar-item-tags")
-                }
+                CalendarTagEditor(
+                    selectedTags: $draft.tags,
+                    availableTags: availableTags,
+                    excludedTags: CalendarTagEditorPolicy.excludedTags(
+                        kind: draft.kind,
+                        dateMode: draft.dateMode
+                    ),
+                    onInputCommitted: {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(300))
+                            scrollProxy.scrollTo("calendar-item-tags-scroll-anchor", anchor: .top)
+                        }
+                    }
+                )
+                .id("calendar-item-tags-scroll-anchor")
 
                 Section("詳細") {
                     TextField("場所", text: optionalBinding(\.location))
@@ -374,6 +386,7 @@ struct CalendarItemEditorSheet: View {
                 if newKind == .event, draft.dateMode == .estimatedWindow {
                     draft.dateMode = .exact
                 }
+                preserveCompletionMeaning(for: newKind)
             }
             .alert(
                 "保存できませんでした",
@@ -387,6 +400,7 @@ struct CalendarItemEditorSheet: View {
                 Button("OK", role: .cancel) { saveError = nil }
             } message: {
                 Text(saveError ?? "最新状態を確認して、もう一度お試しください。")
+            }
             }
         }
         .presentationDetents([.large])
@@ -479,6 +493,16 @@ struct CalendarItemEditorSheet: View {
         recurrenceFrequency = nil
     }
 
+    private func preserveCompletionMeaning(for kind: ManagedCalendarItemKind) {
+        let state = CalendarTagEditorPolicy.completionState(
+            tags: draft.tags,
+            isCompleted: draft.isCompleted,
+            kind: kind
+        )
+        draft.tags = state.tags
+        draft.isCompleted = state.isCompleted
+    }
+
     private var endDateBinding: Binding<Date> {
         guard draft.isAllDay else { return $draft.endDate }
         let calendar = Calendar.current
@@ -534,7 +558,6 @@ struct CalendarItemEditorSheet: View {
 
     private func save() {
         applyEstimatedWindow()
-        draft.tags = Self.tags(from: tagsText)
         draft.alarmOffsets.sort()
         draft.recurrence = CalendarRecurrenceEditorPolicy.ruleForSave(
             original: draft.recurrence,
@@ -551,16 +574,6 @@ struct CalendarItemEditorSheet: View {
         }
     }
 
-    private static func tags(from value: String) -> [String] {
-        value
-            .split { $0.isWhitespace || $0 == "," || $0 == "、" }
-            .map { token in
-                var tag = String(token)
-                while tag.first == "#" || tag.first == "＃" { tag.removeFirst() }
-                return tag
-            }
-            .filter { !$0.isEmpty }
-    }
 
     private static func initialDraft(
         for purpose: CalendarItemEditorPurpose,

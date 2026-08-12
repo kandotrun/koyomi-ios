@@ -18,6 +18,12 @@ struct PinnedEventsSection: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var isExpanded = false
     @State private var pinReferenceDate = Date()
+    @State private var pendingRemoval: PendingPinRemoval?
+
+    private struct PendingPinRemoval: Identifiable {
+        let pin: PinnedEvent
+        var id: String { pin.id }
+    }
 
     private var displayedPins: [PinnedEvent] {
         KoyomiPinnedTimeline.visiblePins(from: model.pinnedEvents, at: pinReferenceDate)
@@ -35,7 +41,7 @@ struct PinnedEventsSection: View {
                 HStack(spacing: 10) {
                     Image(systemName: "pin")
                         .foregroundStyle(.secondary)
-                    Text("大切な予定をピン留めすると、ここでカウントできます。")
+                    Text("予定名に #ピン を付けると、ここでカウントできます。")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -81,6 +87,18 @@ struct PinnedEventsSection: View {
             if phase == .active {
                 pinReferenceDate = .now
             }
+        }
+        .confirmationDialog(
+            "ピン留めを変更する範囲",
+            isPresented: Binding(
+                get: { pendingRemoval != nil },
+                set: { if !$0 { pendingRemoval = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("この予定のみ") { removePendingPin(scope: .thisEvent) }
+            Button("これ以降すべて") { removePendingPin(scope: .futureEvents) }
+            Button("キャンセル", role: .cancel) { pendingRemoval = nil }
         }
     }
 
@@ -142,8 +160,9 @@ struct PinnedEventsSection: View {
                             },
                             onRemove: {
                                 KoyomiHaptics.perform(.togglePin)
-                                model.removePin(pin)
-                            }
+                                requestRemoval(of: pin)
+                            },
+                            allowsRemoval: model.isPinEditable(pin)
                         )
                     }
                 }
@@ -153,6 +172,22 @@ struct PinnedEventsSection: View {
             .scrollIndicators(.hidden)
             .accessibilityIdentifier("pinned-cards-scroll")
         }
+    }
+
+    private func requestRemoval(of pin: PinnedEvent) {
+        let event = model.event(for: pin)
+        switch CalendarPinMutationPolicy.action(isRecurring: event.isRecurring) {
+        case let .apply(scope):
+            model.removePin(pin, scope: scope)
+        case .chooseScope:
+            pendingRemoval = PendingPinRemoval(pin: pin)
+        }
+    }
+
+    private func removePendingPin(scope: CalendarMutationScope) {
+        guard let pendingRemoval else { return }
+        self.pendingRemoval = nil
+        model.removePin(pendingRemoval.pin, scope: scope)
     }
 }
 
@@ -247,6 +282,7 @@ private struct PinnedCountdownCard: View {
     let pin: PinnedEvent
     let onOpen: () -> Void
     let onRemove: () -> Void
+    let allowsRemoval: Bool
 
     private var tint: Color { Color(koyomiHex: pin.calendarColorHex) }
     private var metadata: EventTitleMetadata { pin.titleMetadata }
@@ -263,15 +299,17 @@ private struct PinnedCountdownCard: View {
                 }
             }
 
-            Button(action: onRemove) {
-                Image(systemName: "pin.slash.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(width: 44, height: 44)
+            if allowsRemoval {
+                Button(action: onRemove) {
+                    Image(systemName: "pin.slash.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .padding(.top, 10)
+                .padding(.trailing, 10)
+                .accessibilityLabel("\(metadata.displayTitle)のピン留めを解除")
+                .accessibilityIdentifier("pin-remove-\(pin.id)")
             }
-            .padding(.top, 10)
-            .padding(.trailing, 10)
-            .accessibilityLabel("\(metadata.displayTitle)のピン留めを解除")
-            .accessibilityIdentifier("pin-remove-\(pin.id)")
         }
     }
 

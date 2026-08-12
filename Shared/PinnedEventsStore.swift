@@ -6,11 +6,15 @@ public protocol PinnedEventsDataStorage: Sendable {
     func write(_ data: Data) throws
 }
 
+public enum PinnedEventsStoreError: Error, Equatable, Sendable {
+    case invalidData
+}
+
 public final class UserDefaultsPinnedEventsDataStorage: PinnedEventsDataStorage, @unchecked Sendable {
     private let defaults: UserDefaults
     private let key: String
 
-    public init(defaults: UserDefaults, key: String = KoyomiSharedStorage.pinnedEventsKey) {
+    public init(defaults: UserDefaults, key: String = KoyomiSharedStorage.pinnedEventSnapshotsKey) {
         self.defaults = defaults
         self.key = key
     }
@@ -40,7 +44,7 @@ public final class KeychainPinnedEventsDataStorage: PinnedEventsDataStorage, @un
     public init(
         accessGroup: String = KoyomiSharedStorage.keychainAccessGroup,
         service: String = KoyomiSharedStorage.keychainService,
-        account: String = KoyomiSharedStorage.pinnedEventsKey
+        account: String = KoyomiSharedStorage.pinnedEventSnapshotsKey
     ) {
         self.accessGroup = accessGroup
         self.service = service
@@ -95,12 +99,14 @@ public final class KeychainPinnedEventsDataStorage: PinnedEventsDataStorage, @un
     }
 }
 
+/// Replacement-only cache for Widget display snapshots.
+/// Calendar event titles remain the authority for whether an event is pinned.
 public final class PinnedEventsStore: @unchecked Sendable {
     private let storage: any PinnedEventsDataStorage
     private let migrationStorage: (any PinnedEventsDataStorage)?
     private let lock = NSLock()
 
-    public convenience init(defaults: UserDefaults, key: String = KoyomiSharedStorage.pinnedEventsKey) {
+    public convenience init(defaults: UserDefaults, key: String = KoyomiSharedStorage.pinnedEventSnapshotsKey) {
         self.init(storage: UserDefaultsPinnedEventsDataStorage(defaults: defaults, key: key))
     }
 
@@ -118,8 +124,30 @@ public final class PinnedEventsStore: @unchecked Sendable {
         return readUnlocked()
     }
 
-    public func contains(id: String) -> Bool {
-        load().contains { $0.id == id }
+    /// Loads legacy migration state only after its primary/fallback copies are
+    /// durably synchronized. Any read, decode, or synchronization error fails
+    /// closed so Calendar is never mutated from uncertain local state.
+    public func loadMigrationState() throws -> [PinnedEvent] {
+        lock.lock()
+        defer { lock.unlock() }
+
+        if let primaryData = try storage.read() {
+            guard let events = decode(primaryData) else {
+                throw PinnedEventsStoreError.invalidData
+            }
+            if let migrationStorage {
+                try migrationStorage.write(encode(events))
+            }
+            return events
+        }
+
+        guard let migrationStorage else { return [] }
+        guard let migrationData = try migrationStorage.read() else { return [] }
+        guard let events = decode(migrationData) else {
+            throw PinnedEventsStoreError.invalidData
+        }
+        try storage.write(encode(events))
+        return events
     }
 
     public func save(_ events: [PinnedEvent]) throws {
@@ -128,30 +156,36 @@ public final class PinnedEventsStore: @unchecked Sendable {
         try writeUnlocked(normalize(events))
     }
 
-    @discardableResult
-    public func toggle(_ event: PinnedEvent) throws -> [PinnedEvent] {
+    /// Keeps every legacy copy in the same migration state so stale fallback
+    /// data cannot survive behind the primary store and reappear later.
+    public func saveMigrationState(_ events: [PinnedEvent]) throws {
         lock.lock()
         defer { lock.unlock() }
-
-        var events = readUnlocked()
-        if let index = events.firstIndex(where: { $0.id == event.id }) {
-            events.remove(at: index)
-        } else {
-            events.append(event)
+        let data = try encode(normalize(events))
+        guard let migrationStorage else {
+            try storage.write(data)
+            return
         }
-        events = normalize(events)
-        try writeUnlocked(events)
-        return events
-    }
 
-    @discardableResult
-    public func remove(id: String) throws -> [PinnedEvent] {
-        lock.lock()
-        defer { lock.unlock() }
-
-        let events = normalize(readUnlocked().filter { $0.id != id })
-        try writeUnlocked(events)
-        return events
+        let previousPrimaryData = try storage.read()
+        let previousMigrationData = try migrationStorage.read()
+        try migrationStorage.write(data)
+        do {
+            try storage.write(data)
+        } catch {
+            // The old primary remains authoritative. Restore the fallback now;
+            // if the process dies first, the next load mirrors the old primary.
+            let rollbackData: Data
+            if let previousPrimaryData {
+                rollbackData = previousPrimaryData
+            } else if let previousMigrationData {
+                rollbackData = previousMigrationData
+            } else {
+                rollbackData = try encode([])
+            }
+            try? migrationStorage.write(rollbackData)
+            throw error
+        }
     }
 
     private func readUnlocked() -> [PinnedEvent] {
@@ -163,7 +197,16 @@ public final class PinnedEventsStore: @unchecked Sendable {
         }
 
         if let primaryData {
-            return decode(primaryData) ?? []
+            guard let events = decode(primaryData) else {
+                // Corrupt primary data must not destroy a healthy migration fallback.
+                return []
+            }
+            // Primary wins, but mirror it so a stale fallback cannot reappear
+            // after a later Keychain restore or reset.
+            if let migrationStorage, let synchronizedData = try? encode(events) {
+                try? migrationStorage.write(synchronizedData)
+            }
+            return events
         }
 
         guard
@@ -174,14 +217,22 @@ public final class PinnedEventsStore: @unchecked Sendable {
             return []
         }
 
-        try? writeUnlocked(events)
-        return events
+        do {
+            try writeUnlocked(events)
+            return events
+        } catch {
+            return []
+        }
     }
 
     private func writeUnlocked(_ events: [PinnedEvent]) throws {
+        try storage.write(encode(events))
+    }
+
+    private func encode(_ events: [PinnedEvent]) throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .millisecondsSince1970
-        try storage.write(encoder.encode(events))
+        return try encoder.encode(events)
     }
 
     private func decode(_ data: Data) -> [PinnedEvent]? {
