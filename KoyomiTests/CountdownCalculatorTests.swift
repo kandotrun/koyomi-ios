@@ -177,6 +177,101 @@ final class CountdownCalculatorTests: XCTestCase {
         XCTAssertNil(done.targetDate)
     }
 
+    func testDeadlineProximityUsesFiveStableRemainingTimeBands() {
+        let cases: [(remaining: TimeInterval, level: Int, label: String)] = [
+            (31 * 86_400, 1, "余裕あり"),
+            (30 * 86_400, 2, "近づいています"),
+            (7 * 86_400, 3, "近い"),
+            (24 * 3_600, 4, "かなり近い"),
+            (3_600, 5, "まもなく")
+        ]
+
+        for item in cases {
+            let event = makeEvent(
+                start: now.addingTimeInterval(item.remaining),
+                end: now.addingTimeInterval(item.remaining + 3_600)
+            )
+
+            let proximity = CountdownProximityCalculator.state(for: event, now: now)
+
+            XCTAssertEqual(proximity.level, item.level)
+            XCTAssertEqual(proximity.totalSegmentCount, 5)
+            XCTAssertEqual(proximity.label, item.label)
+            XCTAssertEqual(proximity.activeSegmentIndex, item.level - 1)
+        }
+    }
+
+    func testDeadlineProximityCountsOngoingEventsTowardTheirEnd() {
+        let event = makeEvent(
+            start: now.addingTimeInterval(-86_400),
+            end: now.addingTimeInterval(30 * 60)
+        )
+
+        let proximity = CountdownProximityCalculator.state(for: event, now: now)
+
+        XCTAssertEqual(proximity.level, 5)
+        XCTAssertEqual(proximity.label, "まもなく")
+    }
+
+    func testDeadlineProximityMarksOverdueEstimatedWindowForReview() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let window = try XCTUnwrap(CalendarEstimatedWindow.centered(
+            on: now.addingTimeInterval(-20 * 86_400),
+            bufferDays: 14,
+            calendar: calendar
+        ))
+        var event = makeEvent(start: window.startDate, end: window.endDate)
+        event.title = "受け取り #タスク #見込み"
+        event.isAllDay = true
+
+        let proximity = CountdownProximityCalculator.state(
+            for: event,
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(proximity.level, 5)
+        XCTAssertEqual(proximity.label, "要確認")
+        XCTAssertEqual(proximity.accessibilityDescription, "期限の近さ、要確認、5段階中5")
+    }
+
+    func testDeadlineProximityKeepsEstimatedWindowMeaningWhileInsideIt() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let window = try XCTUnwrap(CalendarEstimatedWindow.centered(
+            on: now.addingTimeInterval(7 * 86_400),
+            bufferDays: 14,
+            calendar: calendar
+        ))
+        var event = makeEvent(start: window.startDate, end: window.endDate)
+        event.title = "受け取り #タスク #見込み"
+        event.isAllDay = true
+
+        let proximity = CountdownProximityCalculator.state(
+            for: event,
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(proximity.level, 4)
+        XCTAssertEqual(proximity.label, "見込み期間内")
+    }
+
+    func testDeadlineProximityShowsNoActiveSegmentsAfterAnExactEventEnds() {
+        let event = makeEvent(
+            start: now.addingTimeInterval(-7_200),
+            end: now.addingTimeInterval(-1)
+        )
+
+        let proximity = CountdownProximityCalculator.state(for: event, now: now)
+
+        XCTAssertEqual(proximity.level, 0)
+        XCTAssertNil(proximity.activeSegmentIndex)
+        XCTAssertEqual(proximity.totalSegmentCount, 5)
+        XCTAssertEqual(proximity.label, "終了")
+    }
+
     private func makeEvent(start: Date, end: Date) -> PinnedEvent {
         PinnedEvent(
             id: "event@\(start.timeIntervalSince1970)",

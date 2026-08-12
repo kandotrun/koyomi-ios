@@ -152,8 +152,13 @@ struct KoyomiWidgetView: View {
                     .lineLimit(2)
                 Spacer(minLength: 2)
                 countdown(for: pin, large: true)
+                proximityIndicator(for: pin)
+                    .frame(height: 7)
             }
             .widgetURL(deepLink(for: pin))
+            .accessibilityValue(
+                CountdownProximityCalculator.state(for: pin, now: entry.date).accessibilityDescription
+            )
         } else {
             emptyContent
         }
@@ -237,10 +242,8 @@ struct KoyomiWidgetView: View {
                 ForEach(entry.pins.prefix(limit)) { pin in
                     Link(destination: deepLink(for: pin)) {
                         HStack(spacing: 10) {
-                            Capsule()
-                                .fill(Color(koyomiHex: pin.calendarColorHex))
-                                .frame(width: 4, height: indicatorHeight)
-                                .widgetAccentable()
+                            proximityIndicator(for: pin, orientation: .vertical)
+                                .frame(width: 6, height: indicatorHeight)
                             Text(pin.titleMetadata.displayTitle)
                                 .font(.subheadline.weight(.semibold))
                                 .lineLimit(titleLineLimit)
@@ -257,6 +260,12 @@ struct KoyomiWidgetView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityValue(
+                        CountdownProximityCalculator.state(
+                            for: pin,
+                            now: entry.date
+                        ).accessibilityDescription
+                    )
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -266,13 +275,20 @@ struct KoyomiWidgetView: View {
     @ViewBuilder
     private var accessoryContent: some View {
         if let pin = entry.pins.first {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(pin.titleMetadata.displayTitle)
-                    .font(.headline)
-                    .lineLimit(1)
-                countdown(for: pin, large: false)
+            HStack(spacing: 7) {
+                proximityIndicator(for: pin, orientation: .vertical)
+                    .frame(width: 5, height: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(pin.titleMetadata.displayTitle)
+                        .font(.headline)
+                        .lineLimit(1)
+                    countdown(for: pin, large: false)
+                }
             }
             .widgetURL(deepLink(for: pin))
+            .accessibilityValue(
+                CountdownProximityCalculator.state(for: pin, now: entry.date).accessibilityDescription
+            )
         } else {
             Label("ピン留めなし", systemImage: "pin")
                 .widgetAccentable()
@@ -320,6 +336,22 @@ struct KoyomiWidgetView: View {
         }
     }
 
+    private func proximityIndicator(
+        for pin: PinnedEvent,
+        orientation: CountdownProximityMeter.Orientation = .horizontal
+    ) -> some View {
+        let state = CountdownProximityCalculator.state(for: pin, now: entry.date)
+        let usesFullColor = renderingMode == .fullColor && family != .accessoryRectangular
+        return CountdownProximityMeter(
+            state: state,
+            orientation: orientation,
+            activeColor: usesFullColor ? state.tone.koyomiColor : primaryColor,
+            trackColor: usesFullColor ? .white.opacity(0.50) : primaryColor.opacity(0.50),
+            spacing: orientation == .vertical ? 2 : 3
+        )
+        .widgetAccentable()
+    }
+
     private func estimatedWidgetLabel(for phase: CountdownPhase) -> String {
         switch phase {
         case .upcoming: "見込みまで"
@@ -341,7 +373,7 @@ struct KoyomiPinnedCountdownWidget: Widget {
             KoyomiWidgetView(entry: entry)
         }
         .configurationDisplayName("ピン留めカウントダウン")
-        .description("大切な予定までの時間を、いつでも確認できます。")
+        .description("大切な予定までの時間と、期限の近さを5段階で確認できます。")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
     }
 }

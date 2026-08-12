@@ -43,6 +43,12 @@ public enum WidgetTimelinePlanner {
                 if pin.endDate > date {
                     pendingTransitions.insert(pin.endDate)
                 }
+                for boundary in CountdownProximityCalculator.futureBoundaryDates(
+                    for: pin,
+                    after: date
+                ) {
+                    pendingTransitions.insert(boundary)
+                }
             }
         }
 

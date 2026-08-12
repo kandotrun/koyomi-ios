@@ -187,6 +187,7 @@ struct KoyomiRootView: View {
             .padding(.bottom, 36)
         }
         .scrollIndicators(.hidden)
+        .accessibilityIdentifier("calendar-content-scroll")
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Color.clear.frame(height: 20)
         }
