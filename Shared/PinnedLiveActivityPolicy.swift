@@ -51,6 +51,14 @@ public enum PinnedLiveActivityPolicy {
             }
     }
 
+    public static func relevanceScore(
+        for startDate: Date,
+        at referenceDate: Date
+    ) -> Double {
+        let remaining = max(startDate.timeIntervalSince(referenceDate), 0)
+        return max(0, min(1, 1 - remaining / countdownWindow))
+    }
+
     public static func displayTitle(for event: PinnedEvent) -> String {
         truncatingUTF8(
             normalizingForActivity(event.titleMetadata.displayTitle),

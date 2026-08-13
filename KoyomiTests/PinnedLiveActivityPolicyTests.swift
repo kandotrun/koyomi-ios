@@ -65,6 +65,47 @@ final class PinnedLiveActivityPolicyTests: XCTestCase {
         )
     }
 
+    func testRelevanceScoreClampsAndTracksTheTwelveHourBoundary() {
+        let epsilon: TimeInterval = 0.001
+
+        XCTAssertEqual(
+            PinnedLiveActivityPolicy.relevanceScore(for: now, at: now),
+            1,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            PinnedLiveActivityPolicy.relevanceScore(
+                for: now.addingTimeInterval(PinnedLiveActivityPolicy.countdownWindow),
+                at: now
+            ),
+            0,
+            accuracy: 0.000_001
+        )
+        XCTAssertGreaterThan(
+            PinnedLiveActivityPolicy.relevanceScore(
+                for: now.addingTimeInterval(PinnedLiveActivityPolicy.countdownWindow - epsilon),
+                at: now
+            ),
+            0
+        )
+        XCTAssertEqual(
+            PinnedLiveActivityPolicy.relevanceScore(
+                for: now.addingTimeInterval(PinnedLiveActivityPolicy.countdownWindow + epsilon),
+                at: now
+            ),
+            0,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            PinnedLiveActivityPolicy.relevanceScore(
+                for: now.addingTimeInterval(-epsilon),
+                at: now
+            ),
+            1,
+            accuracy: 0.000_001
+        )
+    }
+
     func testAllEligiblePinsAreReturnedInStablePriorityOrder() {
         let pins = (0..<7).reversed().map { index in
             pin(

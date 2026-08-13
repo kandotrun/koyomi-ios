@@ -193,10 +193,9 @@ final class PinnedLiveActivityManager: PinnedLiveActivitySynchronizing {
             isAllDay: event.isAllDay,
             isEstimatedDateWindow: event.isEstimatedDateWindow
         )
-        let remaining = max(event.startDate.timeIntervalSince(referenceDate), 0)
-        let relevanceScore = max(
-            0,
-            min(1, 1 - remaining / PinnedLiveActivityPolicy.countdownWindow)
+        let relevanceScore = PinnedLiveActivityPolicy.relevanceScore(
+            for: event.startDate,
+            at: referenceDate
         )
         return ActivityContent(
             state: state,
