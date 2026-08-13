@@ -6,6 +6,17 @@ struct CalendarPermissionView: View {
     @ObservedObject var model: CalendarViewModel
 
     var body: some View {
+        ViewThatFits(in: .vertical) {
+            permissionCard
+            ScrollView {
+                permissionCard
+            }
+            .scrollIndicators(.hidden)
+            .accessibilityIdentifier("calendar-permission-scroll")
+        }
+    }
+
+    private var permissionCard: some View {
         VStack(spacing: 22) {
             Image(systemName: symbol)
                 .font(.system(size: 42, weight: .semibold))
@@ -92,7 +103,7 @@ struct CalendarPermissionView: View {
     private var message: String {
         switch status {
         case .notDetermined:
-            return "iPhoneに登録済みの予定を読み込みます。予定やピン留めは端末の外へ送信しません。"
+            return "iPhoneに登録済みの予定を読み込みます。外部サーバーへ送信しません。ピン予定はLive Activityとして、ペアリング済みのApple WatchやMacにも表示される場合があります。"
         case .denied:
             return "設定で「フルアクセス」を許可すると、予定を表示できます。"
         case .restricted:

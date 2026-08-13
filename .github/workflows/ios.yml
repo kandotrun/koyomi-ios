@@ -90,12 +90,13 @@ jobs:
             -derivedDataPath DerivedData-Build \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify
-      - name: Verify embedded privacy manifests
+      - name: Verify embedded privacy manifests and Live Activity sound
         run: |
           APP_PATH="DerivedData-Build/Build/Products/Debug-iphonesimulator/Koyomi.app"
           WIDGET_PATH="$APP_PATH/PlugIns/KoyomiWidget.appex"
           cmp -s Resources/PrivacyInfo.xcprivacy "$APP_PATH/PrivacyInfo.xcprivacy"
           cmp -s Resources/PrivacyInfo.xcprivacy "$WIDGET_PATH/PrivacyInfo.xcprivacy"
+          cmp -s Resources/KoyomiLiveActivitySilent.caf "$APP_PATH/KoyomiLiveActivitySilent.caf"
       - name: Select simulator
         id: simulator
         run: |

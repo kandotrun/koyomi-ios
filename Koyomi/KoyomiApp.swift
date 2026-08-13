@@ -13,7 +13,8 @@ struct KoyomiApp: App {
                 source: dependencies.source,
                 pinStore: dependencies.pinStore,
                 legacyPinStore: dependencies.legacyPinStore,
-                calendarSelectionStore: dependencies.calendarSelectionStore
+                calendarSelectionStore: dependencies.calendarSelectionStore,
+                liveActivitySynchronizer: dependencies.liveActivitySynchronizer
             )
         )
     }

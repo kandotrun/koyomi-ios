@@ -22,6 +22,7 @@ final class CalendarViewModel: ObservableObject {
     private let pinStore: PinnedEventsStore
     private let legacyPinStore: PinnedEventsStore?
     private let calendarSelectionStore: CalendarSelectionStore
+    private let liveActivitySynchronizer: PinnedLiveActivitySynchronizing
     private let calendar: Calendar
     private let now: () -> Date
     private let cachedDeepLinkPinsByID: [String: PinnedEvent]
@@ -35,6 +36,7 @@ final class CalendarViewModel: ObservableObject {
         pinStore: PinnedEventsStore,
         legacyPinStore: PinnedEventsStore? = nil,
         calendarSelectionStore: CalendarSelectionStore,
+        liveActivitySynchronizer: PinnedLiveActivitySynchronizing = NoopPinnedLiveActivitySynchronizer(),
         calendar: Calendar = .current,
         now: @escaping () -> Date = Date.init
     ) {
@@ -42,6 +44,7 @@ final class CalendarViewModel: ObservableObject {
         self.pinStore = pinStore
         self.legacyPinStore = legacyPinStore
         self.calendarSelectionStore = calendarSelectionStore
+        self.liveActivitySynchronizer = liveActivitySynchronizer
         self.calendar = calendar
         self.now = now
         let cachedPins = PinnedRecurrenceExpander.expandedPins(
@@ -121,6 +124,8 @@ final class CalendarViewModel: ObservableObject {
         WidgetCenter.shared.reloadTimelines(ofKind: "KoyomiPinnedCountdown")
         if authorizationStatus == .fullAccess {
             refresh()
+        } else {
+            liveActivitySynchronizer.synchronize([], at: now())
         }
     }
 
@@ -137,16 +142,22 @@ final class CalendarViewModel: ObservableObject {
                 if !migration.succeeded, errorMessage == nil {
                     errorMessage = "以前のピンの一部をCalendarへ移行できませんでした。"
                 }
+            } else {
+                liveActivitySynchronizer.synchronize([], at: now())
             }
         } catch {
             errorMessage = "カレンダーへのアクセスを確認できませんでした。"
             authorizationStatus = source.authorizationStatus
+            liveActivitySynchronizer.synchronize([], at: now())
         }
     }
 
     func refresh() {
         authorizationStatus = source.authorizationStatus
-        guard authorizationStatus == .fullAccess else { return }
+        guard authorizationStatus == .fullAccess else {
+            liveActivitySynchronizer.synchronize([], at: now())
+            return
+        }
         isLoading = true
         defer { isLoading = false }
         refreshAvailableCalendars()
@@ -729,6 +740,8 @@ final class CalendarViewModel: ObservableObject {
             recurrenceValidationInterval: recurrenceValidationInterval,
             calendar: calendar
         )
+        let synchronizationDate = now()
+        liveActivitySynchronizer.synchronize(snapshots, at: synchronizationDate)
         let nextEditablePinIDs = Set(
             authoritativeCandidates
                 .filter { $0.isPinned && $0.canEdit }
