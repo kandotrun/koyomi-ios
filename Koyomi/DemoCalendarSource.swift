@@ -6,15 +6,18 @@ final class DemoCalendarSource: CalendarEventSource {
     let seededPin: PinnedEvent
     let availableCalendars: [CalendarDescriptor]
     private let shouldFailMutations: Bool
+    private(set) var authorizationStatus: CalendarAccessStatus
 
     init(
         referenceDate: Date = .now,
         calendar: Calendar = .current,
         shouldFailMutations: Bool = false,
         hasReadOnlyPinnedEvent: Bool = false,
-        hasRecurringPinnedEvent: Bool = false
+        hasRecurringPinnedEvent: Bool = false,
+        authorizationStatus: CalendarAccessStatus = .fullAccess
     ) {
         self.shouldFailMutations = shouldFailMutations
+        self.authorizationStatus = authorizationStatus
         let personal = CalendarDescriptor(
             id: "demo-personal",
             title: "個人",
@@ -144,9 +147,10 @@ final class DemoCalendarSource: CalendarEventSource {
         seededPin = project.pinnedSnapshot
     }
 
-    var authorizationStatus: CalendarAccessStatus { .fullAccess }
-
-    func requestFullAccess() async throws -> Bool { true }
+    func requestFullAccess() async throws -> Bool {
+        authorizationStatus = .fullAccess
+        return true
+    }
 
     func events(in interval: DateInterval, calendarIDs: Set<String>) throws -> [CalendarEvent] {
         allEvents.filter {

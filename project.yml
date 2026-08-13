@@ -32,6 +32,9 @@ targets:
       - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
         type: file
+      - path: Resources/KoyomiLiveActivitySilent.caf
+        buildPhase: resources
+        type: file
     resources:
       - path: Koyomi/Assets.xcassets
     dependencies:
@@ -44,7 +47,8 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         ITSAppUsesNonExemptEncryption: false
-        NSCalendarsFullAccessUsageDescription: 予定とタスクの表示・作成・編集・完了・削除、ピン留めのためにカレンダーを使用します。内容は端末の外へ送信しません。
+        NSSupportsLiveActivities: true
+        NSCalendarsFullAccessUsageDescription: 予定とタスクの表示・作成・編集・完了・削除、ピン留めのためにカレンダーを使用します。外部サーバーへ送信しません。ピン予定はLive Activityとしてペアリング済みApple端末にも表示される場合があります。
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UILaunchScreen:

@@ -131,6 +131,69 @@ final class CalendarManagementViewModelTests: XCTestCase {
         XCTAssertTrue(fixture.pinStore.load().isEmpty)
     }
 
+    func testBootstrapSynchronizesCalendarPinsToLiveActivities() throws {
+        let event = makeEvent(title: "12時間以内の予定 #ピン")
+
+        let fixture = try makeFixture(events: [event])
+        let call = try XCTUnwrap(fixture.liveActivitySynchronizer.calls.last)
+
+        XCTAssertEqual(call.events.map(\.id), [event.pinnedSnapshot.id])
+        XCTAssertEqual(call.referenceDate, fixture.now)
+    }
+
+    func testRefreshEndsLiveActivityAfterCalendarPinIsRemovedExternally() throws {
+        let event = makeEvent(title: "解除される予定 #ピン")
+        let fixture = try makeFixture(events: [event])
+        fixture.liveActivitySynchronizer.calls.removeAll()
+
+        fixture.source.storedEvents[0].title = EventTitleTagMutator.applying(
+            EventTitleTagChange(adding: [], removing: [CalendarPin.tag]),
+            to: fixture.source.storedEvents[0].title
+        )
+        fixture.model.refresh()
+
+        let call = try XCTUnwrap(fixture.liveActivitySynchronizer.calls.last)
+        XCTAssertTrue(call.events.isEmpty)
+        XCTAssertEqual(call.referenceDate, fixture.now)
+    }
+
+    func testRefreshEndsLiveActivitiesWhenCalendarAccessIsLost() throws {
+        let event = makeEvent(title: "権限喪失時に隠す予定 #ピン")
+        let fixture = try makeFixture(events: [event])
+        fixture.liveActivitySynchronizer.calls.removeAll()
+        fixture.source.authorizationStatus = .denied
+
+        fixture.model.refresh()
+
+        let call = try XCTUnwrap(fixture.liveActivitySynchronizer.calls.last)
+        XCTAssertTrue(call.events.isEmpty)
+        XCTAssertEqual(call.referenceDate, fixture.now)
+    }
+
+    func testBootstrapEndsLiveActivitiesWhenCalendarAccessIsAlreadyDenied() throws {
+        let suite = "CalendarManagementViewModelTests.deniedBootstrap.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let source = ManagementFakeSource(events: [])
+        source.authorizationStatus = .denied
+        let synchronizer = RecordingPinnedLiveActivitySynchronizer()
+        let now = Date(timeIntervalSince1970: 1_786_406_400)
+        let model = CalendarViewModel(
+            source: source,
+            pinStore: PinnedEventsStore(defaults: defaults),
+            calendarSelectionStore: CalendarSelectionStore(defaults: defaults),
+            liveActivitySynchronizer: synchronizer,
+            now: { now }
+        )
+
+        model.bootstrap()
+
+        let call = try XCTUnwrap(synchronizer.calls.last)
+        XCTAssertTrue(call.events.isEmpty)
+        XCTAssertEqual(call.referenceDate, now)
+    }
+
     func testLegacyStoredPinMigratesToCalendarTitleAndIsThenCleared() throws {
         let event = makeEvent(title: "旧バージョンで固定した予定 #仕事")
         let suite = "CalendarManagementViewModelTests.pinMigration.\(UUID().uuidString)"
@@ -942,6 +1005,36 @@ final class CalendarManagementViewModelTests: XCTestCase {
         XCTAssertTrue(model.errorMessage?.contains("更新しましたが") == true)
     }
 
+    func testUnpinEndsLiveActivityEvenWhenWidgetSnapshotWriteFails() throws {
+        let event = makeEvent(title: "解除はLive Activityへ反映 #ピン")
+        let storage = SwitchablePinnedStorage()
+        let pinStore = PinnedEventsStore(storage: storage)
+        try pinStore.save([event.pinnedSnapshot])
+        let suite = "CalendarManagementViewModelTests.liveActivityWriteFailure.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let source = ManagementFakeSource(events: [event])
+        let synchronizer = RecordingPinnedLiveActivitySynchronizer()
+        let now = Date(timeIntervalSince1970: 1_786_406_400)
+        let model = CalendarViewModel(
+            source: source,
+            pinStore: pinStore,
+            calendarSelectionStore: CalendarSelectionStore(defaults: defaults),
+            liveActivitySynchronizer: synchronizer,
+            now: { now }
+        )
+        model.bootstrap()
+        synchronizer.calls.removeAll()
+        storage.shouldFailWrites = true
+
+        let updated = model.togglePin(event, scope: .thisEvent)
+
+        XCTAssertNotNil(updated)
+        XCTAssertFalse(try XCTUnwrap(updated).isPinned)
+        XCTAssertTrue(try XCTUnwrap(synchronizer.calls.last).events.isEmpty)
+        XCTAssertTrue(model.errorMessage?.contains("同期を完了できませんでした") == true)
+    }
+
     private func pinnedEvent(id: String, start: Date, end: Date) -> PinnedEvent {
         PinnedEvent(
             id: id,
@@ -967,6 +1060,7 @@ final class CalendarManagementViewModelTests: XCTestCase {
         let pinStore = PinnedEventsStore(defaults: defaults)
         try pinStore.save(pinned)
         let source = ManagementFakeSource(events: events)
+        let liveActivitySynchronizer = RecordingPinnedLiveActivitySynchronizer()
         let now = Date(timeIntervalSince1970: 1_786_406_400)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -974,11 +1068,18 @@ final class CalendarManagementViewModelTests: XCTestCase {
             source: source,
             pinStore: pinStore,
             calendarSelectionStore: CalendarSelectionStore(defaults: defaults),
+            liveActivitySynchronizer: liveActivitySynchronizer,
             calendar: calendar,
             now: { now }
         )
         model.bootstrap()
-        return Fixture(model: model, source: source, pinStore: pinStore, now: now)
+        return Fixture(
+            model: model,
+            source: source,
+            pinStore: pinStore,
+            liveActivitySynchronizer: liveActivitySynchronizer,
+            now: now
+        )
     }
 
     private func makeEvent(
@@ -1206,5 +1307,20 @@ private struct Fixture {
     let model: CalendarViewModel
     let source: ManagementFakeSource
     let pinStore: PinnedEventsStore
+    let liveActivitySynchronizer: RecordingPinnedLiveActivitySynchronizer
     let now: Date
+}
+
+@MainActor
+private final class RecordingPinnedLiveActivitySynchronizer: PinnedLiveActivitySynchronizing {
+    struct Call {
+        let events: [PinnedEvent]
+        let referenceDate: Date
+    }
+
+    var calls: [Call] = []
+
+    func synchronize(_ events: [PinnedEvent], at referenceDate: Date) {
+        calls.append(Call(events: events, referenceDate: referenceDate))
+    }
 }

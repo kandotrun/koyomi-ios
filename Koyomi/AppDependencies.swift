@@ -6,6 +6,7 @@ struct AppDependencies {
     let pinStore: PinnedEventsStore
     let legacyPinStore: PinnedEventsStore?
     let calendarSelectionStore: CalendarSelectionStore
+    let liveActivitySynchronizer: PinnedLiveActivitySynchronizing
 
     static func make() -> AppDependencies {
         if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
@@ -21,7 +22,10 @@ struct AppDependencies {
                 ),
                 hasRecurringPinnedEvent: ProcessInfo.processInfo.arguments.contains(
                     "-ui-testing-recurring-pin"
-                )
+                ),
+                authorizationStatus: ProcessInfo.processInfo.arguments.contains(
+                    "-ui-testing-calendar-permission"
+                ) ? .notDetermined : .fullAccess
             )
             let store = PinnedEventsStore(defaults: defaults)
             try? store.save([source.seededPin])
@@ -29,7 +33,8 @@ struct AppDependencies {
                 source: source,
                 pinStore: store,
                 legacyPinStore: nil,
-                calendarSelectionStore: CalendarSelectionStore(defaults: defaults)
+                calendarSelectionStore: CalendarSelectionStore(defaults: defaults),
+                liveActivitySynchronizer: NoopPinnedLiveActivitySynchronizer()
             )
         }
 
@@ -45,7 +50,8 @@ struct AppDependencies {
                     key: KoyomiSharedStorage.legacyPinnedEventsKey
                 )
             ),
-            calendarSelectionStore: CalendarSelectionStore()
+            calendarSelectionStore: CalendarSelectionStore(),
+            liveActivitySynchronizer: PinnedLiveActivityManager.shared
         )
     }
 }

@@ -6,6 +6,32 @@ final class KoyomiUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testCalendarPermissionDisclosureFitsAccessibilityTextSize() {
+        let app = launchDemo(
+            additionalArguments: [
+                "-ui-testing-calendar-permission",
+                "-UIPreferredContentSizeCategoryName",
+                "UICTContentSizeCategoryAccessibilityXXXL"
+            ]
+        )
+        let disclosure = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Apple WatchやMac")
+        ).firstMatch
+        XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
+
+        let button = app.buttons["カレンダーを表示"]
+        XCTAssertTrue(button.waitForExistence(timeout: 2))
+        let permissionScroll = app.scrollViews["calendar-permission-scroll"]
+        XCTAssertTrue(permissionScroll.exists)
+        let window = app.windows.firstMatch.frame
+        for _ in 0..<8 where !button.isHittable || button.frame.maxY > window.maxY - 8 {
+            permissionScroll.swipeUp()
+        }
+        XCTAssertTrue(button.isHittable)
+        XCTAssertGreaterThanOrEqual(button.frame.minY, window.minY)
+        XCTAssertLessThanOrEqual(button.frame.maxY, window.maxY)
+    }
+
     func testDemoShowsPinnedCountdownAndDailyAgenda() {
         let app = launchDemo()
 

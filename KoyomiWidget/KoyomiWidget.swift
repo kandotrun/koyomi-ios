@@ -382,5 +382,6 @@ struct KoyomiPinnedCountdownWidget: Widget {
 struct KoyomiWidgetBundle: WidgetBundle {
     var body: some Widget {
         KoyomiPinnedCountdownWidget()
+        KoyomiPinnedEventLiveActivity()
     }
 }
